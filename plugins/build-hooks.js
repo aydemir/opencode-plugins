@@ -25,9 +25,14 @@ export const BuildHooksPlugin = async (input, options) => {
     };
     const sess = createSession(config);
     const pendingCalls = new Map();
+    let lastBuildMessage = null;
     const endSession = (status) => {
         const duration = Date.now() - sess.startTime;
+        const msg = status === "success"
+            ? `✅ Build finished (${formatDuration(duration)})`
+            : `❌ Build failed`;
         console.log(`[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${sess.command} — ${formatDuration(duration)}`);
+        lastBuildMessage = msg;
         sess.active = false;
         sess.command = "";
         sess.callIDs = [];
@@ -49,9 +54,9 @@ export const BuildHooksPlugin = async (input, options) => {
     return {
         async dispose() {
             pendingCalls.clear();
+            lastBuildMessage = null;
         },
         "tool.execute.before": async (t, output) => {
-            // output.args contains the tool arguments before execution (bash command etc.)
             const args = output?.args ?? t?.args ?? {};
             const cmd = getCommandFromArgs(args);
             if (cmd && isBuildCommand(cmd, config.buildKeywords)) {
@@ -62,9 +67,9 @@ export const BuildHooksPlugin = async (input, options) => {
                 sess.startTime = Date.now();
                 sess.status = "running";
                 sess.buildCallID = t.callID;
+                lastBuildMessage = `🏗️ Build started: ${cmd}`;
                 console.log(`[Build Hook] 🔨 onBuildStart: ${cmd}`);
             }
-            // track all calls during active session for threshold/progress
             if (sess.active) {
                 pendingCalls.set(t.callID, Date.now());
                 sess.callIDs.push(t.callID);
@@ -78,10 +83,16 @@ export const BuildHooksPlugin = async (input, options) => {
             const duration = Date.now() - startTime;
             const outStr = output.output ?? "";
             const hasError = /\berror\b|\bfailed\b|\bFAILED\b/i.test(outStr);
-            // Only the build call itself decides success/failure; other tools just threshold check
             const isBuildCall = sess.buildCallID === t.callID;
+            // UI: build started mesajını output'a ekle (TUI'de görünsün)
+            const startedMsg = sess.command ? `🏗️ Build started: ${sess.command}` : null;
             if (hasError) {
                 console.log(`[Build Hook] ❌ onBuildFailure: ${t.tool} — errors detected in ${formatDuration(duration)}`);
+                const finishedMsg = `❌ Build failed`;
+                if (isBuildCall) {
+                    ;
+                    output.output = `${startedMsg ? startedMsg + "\n" : ""}${outStr}\n${finishedMsg}`;
+                }
                 return endSession("failed");
             }
             if (isBuildCall) {
@@ -89,18 +100,25 @@ export const BuildHooksPlugin = async (input, options) => {
                 if (dur >= config.thresholdMs) {
                     console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
                 }
+                const finishedMsg = `✅ Build finished (${formatDuration(dur)})`;
+                output.output = `${startedMsg ? startedMsg + "\n" : ""}${outStr}\n${finishedMsg}`;
                 return endSession("success");
             }
-            // For non-build calls during session, just check threshold
             const dur = Date.now() - sess.startTime;
             if (dur >= config.thresholdMs) {
                 console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
             }
         },
+        "chat.message": async (_msgInput, msgOutput) => {
+            if (lastBuildMessage) {
+                ;
+                msgOutput.parts.push({ type: "text", text: lastBuildMessage });
+                lastBuildMessage = null;
+            }
+        },
         event: async ({ event }) => {
             const e = event;
             const type = e.type;
-            // Alternative build detection via events (tui/command)
             if (type === "command.executed" || type === "tui.command.execute") {
                 const cmd = e.command ?? e.data?.command ?? "";
                 if (typeof cmd === "string" && isBuildCommand(cmd, config.buildKeywords)) {
@@ -109,6 +127,7 @@ export const BuildHooksPlugin = async (input, options) => {
                         sess.command = cmd;
                         sess.startTime = Date.now();
                         sess.status = "running";
+                        lastBuildMessage = `🏗️ Build started: ${cmd}`;
                         console.log(`[Build Hook] 🔨 onBuildStart (event): ${cmd}`);
                     }
                 }
@@ -116,7 +135,6 @@ export const BuildHooksPlugin = async (input, options) => {
             }
             if (type === "session.idle") {
                 if (sess.active) {
-                    // Session idle without explicit close → treat as success
                     return endSession("success");
                 }
                 return;
