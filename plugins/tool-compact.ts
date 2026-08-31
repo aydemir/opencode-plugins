@@ -1,4 +1,4 @@
-import type { Plugin, Part } from "@opencode-ai/plugin"
+import type { Plugin } from "@opencode-ai/plugin"
 
 interface ToolLogEntry {
   name: string
@@ -47,9 +47,9 @@ function formatCompactLog(entries: ToolLogEntry[]): string {
 
 export const ToolCompactPlugin: Plugin = async (input, options?: Record<string, unknown>) => {
   const config: CompactConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
-   const logs: ToolLogEntry[] = []
-   const startTimes = new Map<string, number>()
-   let turnCallCount = 0
+  const logs: ToolLogEntry[] = []
+  const startTimes = new Map<string, number>()
+  let turnCallCount = 0
 
   const addLog = (entry: ToolLogEntry) => {
     logs.push(entry)
@@ -108,12 +108,12 @@ export const ToolCompactPlugin: Plugin = async (input, options?: Record<string, 
       if (recentErrors > 0) lines.push(`⚠️ ${recentErrors} hata oluştu`)
       lines.push("", summary, "", "📊 Araç sonuçları özlendi — context tasarruf edilmiştir", "")
 
-      msgOutput.parts.push({ type: "text", text: lines.join("\n") })
+      ;(msgOutput as any).parts.push({ type: "text", text: lines.join("\n") })
       turnCallCount = 0
     },
 
     event: async ({ event }) => {
-      if ((event as Record<string, unknown>).type === "session.completed") {
+      if ((event as Record<string, unknown>).type === "session.idle") {
         const total = logs.length
         const errors = logs.filter((e) => e.error).length
         console.log(`[Tool Compact] 📊 Oturum tamamlandı: ${total} çağrı, ${errors} hata`)
