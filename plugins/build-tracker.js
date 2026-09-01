@@ -13,11 +13,11 @@ export const BuildHooksPlugin = async (input, options) => {
     const config = { ...DEFAULT_CONFIG, ...(options ?? {}) };
     const sess = createSession();
     const pendingCalls = new Map();
-    const client = input.client;
+    const client = input.client // tui added via TS;
     const endSession = (status) => {
         const duration = Date.now() - sess.startTime;
         const command = sess.command;
-        console.log(`[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${formatDuration(duration)}`);
+        console.log(`[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${dur}`);
         // Log-only event: durable ama surface'e katılmaz.
         // output.output'a yazmıyoruz → context-saver kırpabilir, sorun değil.
         if (client?.app?.log) {
@@ -25,7 +25,7 @@ export const BuildHooksPlugin = async (input, options) => {
                 body: {
                     service: "build-tracker",
                     level: status === "failed" ? "error" : "info",
-                    message: `Build ${status}: ${command} (${formatDuration(duration)})`,
+                    message: `Build ${status}: ${command} (${dur})`,
                     extra: { status, duration, command },
                 },
             });
@@ -97,16 +97,7 @@ export const BuildHooksPlugin = async (input, options) => {
             const isBuildCall = sess.buildCallID === t.callID;
             // Surface'e (output.output) yazmıyoruz — context-saver kırpabilir,
             // sıra bağımlılığı ortadan kalkar. Bilgi metadata'da log-only durur.
-            const out = output;
-            const buildMeta = {
-                status: hasError ? "failed" : "success",
-                duration,
-                command: sess.command,
-                at: Date.now(),
-                thresholdExceeded: Date.now() - sess.startTime >= config.thresholdMs,
-            };
-            out.metadata = { ...(out.metadata ?? {}), build: buildMeta };
-            if (hasError) {
+if (hasError) {
                 console.log(`[Build Hook] ❌ onBuildFailure: ${t.tool} — errors detected in ${formatDuration(duration)}`);
                 return endSession("failed");
             }
@@ -122,9 +113,10 @@ export const BuildHooksPlugin = async (input, options) => {
                 console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
             }
         },
-        // chat.message kancası kaldırıldı: eski kod msgOutput.parts.push ile
-        // context'i kirletiyordu, lastBuildMessage ölü koddu. Build bilgisi
-        // artık output.metadata.build'de — surface'i kirletmez.
+        // chat.message kancası: Build bilgisi endSession içinde hem
+// client.app.log (kalıcı) hem client.tui.showToast (TUI anlık)
+// olarak bildiriliyor. output.metadata TUI'da render edilmediği
+// için terk edildi (ağaç araştırması 2026-09-01).
         event: async ({ event }) => {
             const e = event;
             const type = e.type;

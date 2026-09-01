@@ -188,33 +188,6 @@ await okAsync("build-tracker: non-build command does not start session", async (
   console.log = origLog;
 });
 
-await okAsync("build-tracker: failure detected via error in output", async () => {
-  const logs = [];
-  const origLog = console.log;
-  console.log = (...a) => logs.push(a.join(" "));
-  const fakeClient = { app: { log: async () => {} } };
-  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
-  const t = { callID: "b3", tool: "bash", args: { command: "cargo build" } };
-  await plugin["tool.execute.before"](t, { args: t.args });
-  const out = { output: "error: compilation failed" };
-  await plugin["tool.execute.after"](t, out);
-  assert.ok(logs.some(l => l.includes("onBuildFailure")));
-  assert.equal(out.metadata.build.status, "failed");
-  console.log = origLog;
-});
-
-await okAsync("build-tracker: metadata thresholdExceeded flag", async () => {
-  const fakeClient = { app: { log: async () => {} } };
-  const plugin = await BuildHooksPlugin({ client: fakeClient }, { thresholdMs: 1 }); // tiny threshold
-  const t = { callID: "b4", tool: "bash", args: { command: "tsc --noEmit" } };
-  await plugin["tool.execute.before"](t, { args: t.args });
-  // wait 5ms to exceed threshold
-  await new Promise(r => setTimeout(r, 5));
-  const out = { output: "ok" };
-  await plugin["tool.execute.after"](t, out);
-  assert.equal(out.metadata.build.thresholdExceeded, true);
-});
-
 await okAsync("build-tracker: chained command detected", async () => {
   const logs = [];
   const origLog = console.log;
@@ -254,7 +227,6 @@ await okAsync("build-tracker: false positive guard (comment + help text)", async
   await plugin["tool.execute.after"](tA, outA);
   // Yorum false positive üretmemeli → success
   assert.ok(!logs.some((l) => l.includes("onBuildFailure")), "yorum satırı false positive");
-  assert.equal(outA.metadata.build.status, "success");
   console.log = origLog;
 });
 
@@ -273,7 +245,6 @@ await okAsync("build-tracker: false positive guard (help text)", async () => {
   await plugin["tool.execute.after"](tB, outB);
   // Help text false positive üretmemeli → success
   assert.ok(!logs.some((l) => l.includes("onBuildFailure")), "help text false positive");
-  assert.equal(outB.metadata.build.status, "success");
   console.log = origLog;
 });
 
@@ -293,8 +264,50 @@ await okAsync("build-tracker: real build error still detected", async () => {
   await plugin["tool.execute.after"](tC, outC);
   // Gerçek hata yakalanmalı
   assert.ok(logs.some((l) => l.includes("onBuildFailure")), "rustc error algılanmalı");
-  assert.equal(outC.metadata.build.status, "failed");
+  // metadata artık yazılmıyor (TUI fallback), sadece log kontrolü
   console.log = origLog;
+});
+
+// --- build-tracker: TUI toast fallback ---
+await okAsync("build-tracker: TUI toast on success", async () => {
+  const toasts = [];
+  const fakeClient = {
+    app: { log: async () => {} },
+    tui: { showToast: async (m) => { toasts.push(m); } },
+  };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+  const t = { callID: "toast1", tool: "bash", args: { command: "npm run build" } };
+  await plugin["tool.execute.before"](t, { args: t.args });
+  const out = { output: "build succeeded" };
+  await plugin["tool.execute.after"](t, out);
+  assert.equal(toasts.length, 1);
+  assert.ok(toasts[0].body.message.includes("Build success"));
+  assert.ok(toasts[0].body.message.includes("npm run build"));
+  assert.equal(toasts[0].body.variant, "info");
+});
+
+await okAsync("build-tracker: TUI toast on failure with error variant", async () => {
+  const toasts = [];
+  const fakeClient = {
+    app: { log: async () => {} },
+    tui: { showToast: async (m) => { toasts.push(m); } },
+  };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+  const t = { callID: "toast2", tool: "bash", args: { command: "cargo build" } };
+  await plugin["tool.execute.before"](t, { args: t.args });
+  const out = { output: "error[E0425]: cannot find value `x`" };
+  await plugin["tool.execute.after"](t, out);
+  assert.equal(toasts.length, 1);
+  assert.ok(toasts[0].body.message.includes("Build failed"));
+  assert.equal(toasts[0].body.variant, "error");
+});
+
+await okAsync("build-tracker: no toast when tui API missing (graceful)", async () => {
+  const fakeClient = { app: { log: async () => {} } };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+  const t = { callID: "notoast1", tool: "bash", args: { command: "npm run build" } };
+  await plugin["tool.execute.before"](t, { args: t.args });
+  await plugin["tool.execute.after"](t, { output: "ok" });
 });
 
 console.log(`\n--- SONUÇ: ${pass} geçti, ${fail} kaldı ---`);

@@ -36,23 +36,34 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
   const config: BuildConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
   const sess = createSession()
   const pendingCalls = new Map<string, number>()
-  const client = (input as unknown as { client?: { app?: { log?: (b: unknown) => Promise<void> | void } } }).client
+  const client = (input as unknown as { client?: { app?: { log?: (b: unknown) => Promise<void> | void }; tui?: { showToast?: (i: unknown) => Promise<void> | void } } }).client
 
   const endSession = (status: "success" | "failed") => {
     const duration = Date.now() - sess.startTime
     const command = sess.command
+    const dur = formatDuration(duration)
     console.log(
-      `[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${formatDuration(duration)}`,
+      `[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${dur}`,
     )
-    // Log-only event: durable ama surface'e katılmaz.
-    // output.output'a yazmıyoruz → context-saver kırpabilir, sorun değil.
+    // 1) Kalıcı log (debug/replay)
     if (client?.app?.log) {
       void client.app.log({
         body: {
           service: "build-tracker",
           level: status === "failed" ? "error" : "info",
-          message: `Build ${status}: ${command} (${formatDuration(duration)})`,
+          message: `Build ${status}: ${command} (${dur})`,
           extra: { status, duration, command },
+        },
+      })
+    }
+    // 2) TUI toast — kullanıcı anlık görür, scroll-back'te kalıcı değil
+    //    (output.metadata TUI'da render edilmediği için en iyi alternatif)
+    if (client?.tui?.showToast) {
+      const icon = status === "success" ? "✅" : "❌"
+      void client.tui.showToast({
+        body: {
+          message: `${icon} Build ${status}: ${command} (${dur})`,
+          variant: status === "failed" ? "error" : "info",
         },
       })
     }
@@ -124,15 +135,7 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
 
       // Surface'e (output.output) yazmıyoruz — context-saver kırpabilir,
       // sıra bağımlılığı ortadan kalkar. Bilgi metadata'da log-only durur.
-      const out = output as ToolAfterOutput
-      const buildMeta = {
-        status: hasError ? ("failed" as const) : ("success" as const),
-        duration,
-        command: sess.command,
-        at: Date.now(),
-        thresholdExceeded: Date.now() - sess.startTime >= config.thresholdMs,
-      }
-      out.metadata = { ...(out.metadata ?? {}), build: buildMeta }
+
 
       if (hasError) {
         console.log(
@@ -159,9 +162,10 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
       }
     },
 
-    // chat.message kancası kaldırıldı: eski kod msgOutput.parts.push ile
-    // context'i kirletiyordu, lastBuildMessage ölü koddu. Build bilgisi
-    // artık output.metadata.build'de — surface'i kirletmez.
+    // chat.message kancası: Build bilgisi endSession içinde hem
+// client.app.log (kalıcı) hem client.tui.showToast (TUI anlık)
+// olarak bildiriliyor. output.metadata TUI'da render edilmediği
+// için terk edildi (ağaç araştırması 2026-09-01).
 
     event: async ({ event }) => {
       const e = event as Record<string, unknown>
