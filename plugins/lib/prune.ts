@@ -194,8 +194,9 @@ export function extractErrors(
   const tail = options.tailLines ?? 5
   const lines = output.split("\n")
 
-  const tailSet = new Set(lines.slice(-tail))
   const matches = lines.filter((line) => ERROR_LINE_RE.test(line))
+  if (matches.length === 0) return []
+  const tailSet = new Set(lines.slice(-tail))
   // tail satırları her zaman ekle, head satırlarını max'e kadar doldur
   const head = matches.filter((l) => !tailSet.has(l)).slice(0, Math.max(0, max - tail))
   const tailKept = lines.slice(-tail)
