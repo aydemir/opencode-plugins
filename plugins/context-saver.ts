@@ -45,7 +45,7 @@ function formatCompactLog(entries: ToolLogEntry[]): string {
   return lines.join("\n")
 }
 
-export const ToolCompactPlugin: Plugin = async (input, options?: Record<string, unknown>) => {
+export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, unknown>) => {
   const config: CompactConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
   const logs: ToolLogEntry[] = []
   const startTimes = new Map<string, number>()
@@ -95,7 +95,7 @@ export const ToolCompactPlugin: Plugin = async (input, options?: Record<string, 
       }
     },
 
-    "chat.message": async (_msgInput, msgOutput) => {
+    "chat.message": async (_msgInput, _msgOutput) => {
       if (logs.length === 0 || !config.injectAsSummary || turnCallCount === 0) return
 
       const summary = formatCompactLog(logs)
@@ -108,15 +108,15 @@ export const ToolCompactPlugin: Plugin = async (input, options?: Record<string, 
       if (recentErrors > 0) lines.push(`⚠️ ${recentErrors} hata oluştu`)
       lines.push("", summary, "", "📊 Araç sonuçları özlendi — context tasarruf edilmiştir", "")
 
-      ;(msgOutput as any).parts.push({ type: "text", text: lines.join("\n") })
+      await client.tui.showToast({ body: { message: lines.join("\n"), variant: "info" } })
       turnCallCount = 0
     },
 
     event: async ({ event }) => {
-      if ((event as Record<string, unknown>).type === "session.idle") {
+      if ((event as Record<string, unknown>).type === "session.idle" && logs.length > 0) {
         const total = logs.length
         const errors = logs.filter((e) => e.error).length
-        console.log(`[Tool Compact] 📊 Oturum tamamlandı: ${total} çağrı, ${errors} hata`)
+        await client.app.log({ body: { service: "context-saver", level: "info", message: `Oturum tamamlandı: ${total} çağrı, ${errors} hata`, extra: { total, errors } } })
       }
     },
   }

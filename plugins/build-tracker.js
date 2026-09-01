@@ -109,10 +109,9 @@ export const BuildHooksPlugin = async (input, options) => {
                 console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
             }
         },
-        "chat.message": async (_msgInput, msgOutput) => {
+        "chat.message": async (_msgInput, _msgOutput) => {
+            // TUI fix: build bildirimi artik mesaj yazma alanina enjekte edilmiyor
             if (lastBuildMessage) {
-                ;
-                msgOutput.parts.push({ type: "text", text: lastBuildMessage });
                 lastBuildMessage = null;
             }
         },
@@ -143,4 +142,4 @@ export const BuildHooksPlugin = async (input, options) => {
     };
 };
 export default BuildHooksPlugin;
-//# sourceMappingURL=build-hooks.js.map
+//# sourceMappingURL=build-tracker.js.map

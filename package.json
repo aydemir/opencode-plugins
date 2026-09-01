@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — tool-compact (DHS PTC-mode) ve build-hooks",
+  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (context-saver, DHS PTC-mode) ve opencode-build-tracker (build-tracker)",
   "workspaces": [
     "plugins/*"
   ],
@@ -15,10 +15,13 @@
   },
   "keywords": [
     "opencode",
-    "plugin",
-    "ai",
-    "tool-compact",
-    "build-hooks"
+    "opencode-plugin",
+    "opencode-context-saver",
+    "opencode-build-tracker",
+    "context-saver",
+    "build-tracker",
+    "dhs",
+    "ptc"
   ],
   "author": "",
   "license": "MIT",
@@ -30,5 +33,16 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "exports": {
+    "./build-tracker": "./dist/plugins/build-tracker.js",
+    "./context-saver": "./dist/plugins/context-saver.js",
+    "./opencode-build-tracker": "./dist/plugins/build-tracker.js",
+    "./opencode-context-saver": "./dist/plugins/context-saver.js"
+  },
+  "files": [
+    "dist",
+    "plugins",
+    "docs"
+  ]
 }

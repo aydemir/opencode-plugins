@@ -1,12 +1,12 @@
-# tool-compact — DHS PTC-mode
+# opencode-context-saver — DHS PTC-mode
 
-`plugins/tool-compact.ts` (`125 satır`) — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
+`plugins/context-saver.ts` (`125 satır`) — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
 
 ## Kaynak
 
-- Dosya: `plugins/tool-compact.ts:1-125`
-- Kaynak kopya: `tmp/tool-compact-full.ts` (codegraph ile doğrulandı, verbatim)
-- Derlenmiş: `plugins/tool-compact.js`
+- Dosya: `plugins/context-saver.ts:1-125`
+- Kaynak kopya: `tmp/context-saver-full.ts` (codegraph ile doğrulandı, verbatim)
+- Derlenmiş: `plugins/context-saver.js`
 
 ## Sözleşme
 
@@ -20,25 +20,25 @@ interface CompactConfig {
 }
 ```
 
-`ToolCompactPlugin(input, options?)` ile override edilebilir (`tool-compact.ts:48-49`).
+`ToolCompactPlugin(input, options?)` ile override edilebilir (`context-saver.ts:48-49`).
 
 ### Akış
 
 ```
 tool.execute.before → startTimes.set(callID, Date.now())
 tool.execute.after  → extractErrors(rawOutput) → isError?
-                      ├─ isError:  output = `⚠️ {summary}\n{errors}\n⏱️ {dur}ms` (tool-compact.ts:91-92)
-                      └─ !isError && raw>500: output = `[ {summary}]\n{raw.slice(0,200)}...\n⏱️ {dur}ms` (tool-compact.ts:93-94)
+                      ├─ isError:  output = `⚠️ {summary}\n{errors}\n⏱️ {dur}ms` (context-saver.ts:91-92)
+                      └─ !isError && raw>500: output = `[ {summary}]\n{raw.slice(0,200)}...\n⏱️ {dur}ms` (context-saver.ts:93-94)
                       └─ else: raw olduğu gibi
-chat.message        → 📋 [Araç Özeti] {total} çağrı + formatCompactLog(last20) (tool-compact.ts:98-112)
-event(session.completed) → console.log oturum özeti (tool-compact.ts:115-120)
+chat.message        → 📋 [Araç Özeti] {total} çağrı + formatCompactLog(last20) (context-saver.ts:98-112)
+event(session.completed) → console.log oturum özeti (context-saver.ts:115-120)
 ```
 
 ### Yardımcılar
 
-- `extractErrors(output)` (`tool-compact.ts:24-29`): satır bazlı filtre, regex `/\berror\b|\bfailed\b|\bFAILED\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError/i`, ilk 15 satır.
-- `extractSummary(name, args)` (`tool-compact.ts:31-36`): `name(k1="v1", k2="v2" (+N param))` — ilk 3 anahtar.
-- `formatCompactLog(entries)` (`tool-compact.ts:38-46`): son 20 log, `✅/❌ [dur] summary`.
+- `extractErrors(output)` (`context-saver.ts:24-29`): satır bazlı filtre, regex `/\berror\b|\bfailed\b|\bFAILED\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError/i`, ilk 15 satır.
+- `extractSummary(name, args)` (`context-saver.ts:31-36`): `name(k1="v1", k2="v2" (+N param))` — ilk 3 anahtar.
+- `formatCompactLog(entries)` (`context-saver.ts:38-46`): son 20 log, `✅/❌ [dur] summary`.
 
 ## Ölçüm (gerçek dosyalarla)
 
@@ -63,7 +63,7 @@ Token tahmini (~4 char/token): 20k → 0.5k token.
 
 ```jsonc
 {
-  "plugin": ["./plugins/tool-compact.ts"]
+  "plugin": ["./plugins/context-saver.ts"]
 }
 ```
 
@@ -77,7 +77,7 @@ ToolCompactPlugin(input, { maxLogEntries: 30, compressThreshold: 800, injectAsSu
 ## Dikkat
 
 - `error` kelimesi içermeyen büyük çıktılar 200 char'a kesilir — ortadaki kritik detay kaybolabilir. Bu bilinçli trade-off (PTC-mode).
-- `maxLogEntries` aşıldığında en eski log `shift()` ile atılır (`tool-compact.ts:56`).
+- `maxLogEntries` aşıldığında en eski log `shift()` ile atılır (`context-saver.ts:56`).
 
 ## Test
 

@@ -134,9 +134,10 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
       }
     },
 
-    "chat.message": async (_msgInput, msgOutput) => {
+    "chat.message": async (_msgInput, _msgOutput) => {
+      // TUI fix: build bildirimi artık mesaj yazma alanına enjekte edilmiyor
+      // onceki kod msgOutput.parts.push ile inputu kirletiyordu
       if (lastBuildMessage) {
-        ;(msgOutput as any).parts.push({ type: "text", text: lastBuildMessage })
         lastBuildMessage = null
       }
     },

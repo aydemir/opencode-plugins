@@ -1,6 +1,6 @@
 # opencode-plugins
 
-OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`tool-compact` (DHS PTC-mode)** context tasarrufu ve **`build-hooks`** build yaşam döngüsü kancaları.
+OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context-saver` (`context-saver`, DHS PTC-mode)** context tasarrufu ve **`opencode-build-tracker` (`build-tracker`)** build yaşam döngüsü kancaları.
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
 
@@ -8,10 +8,10 @@ OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`tool-compact` (D
 
 | Eklenti | Dosya | Amaç | Tasarruf |
 |---------|-------|------|----------|
-| **tool-compact** | `plugins/tool-compact.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
-| **build-hooks** | `plugins/build-hooks.ts` | Build komutlarını algılar, `onBuildStart / onProgress / onBuildFailure / onThresholdExceeded` kancaları | — |
+| **context-saver** | `plugins/context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
+| **build-tracker** | `plugins/build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onProgress / onBuildFailure / onThresholdExceeded` kancaları | — |
 
-Detaylı doküman: `docs/tool-compact.md` ve `docs/build-hooks.md`
+Detaylı doküman: `docs/context-saver.md` ve `docs/build-tracker.md`
 
 ## Kurulum
 
@@ -19,8 +19,8 @@ Detaylı doküman: `docs/tool-compact.md` ve `docs/build-hooks.md`
 
 ```bash
 git clone https://github.com/<org>/opencode-plugins.git
-cp opencode-plugins/plugins/tool-compact.ts ~/.config/opencode/plugins/
-cp opencode-plugins/plugins/build-hooks.ts ~/.config/opencode/plugins/
+cp opencode-plugins/plugins/context-saver.ts ~/.config/opencode/plugins/
+cp opencode-plugins/plugins/build-tracker.ts ~/.config/opencode/plugins/
 ```
 
 ### 2) Seçenek B — Doğrudan opencode.jsonc ile
@@ -32,8 +32,8 @@ cp opencode-plugins/plugins/build-hooks.ts ~/.config/opencode/plugins/
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     "opencode-mem",
-    "./plugins/tool-compact.ts",
-    "./plugins/build-hooks.ts"
+    "./plugins/context-saver.ts",
+    "./plugins/build-tracker.ts"
   ]
 }
 ```
@@ -55,11 +55,11 @@ npm run build
 ## Hızlı Doğrulama
 
 ```bash
-# tool-compact regex'i manuel test et
+# context-saver regex'i manuel test et
 node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 
 # 3 dosya ile tasarruf ölçümü (repo içindeki ölçüm script'i ile aynı mantık)
-# Bkz. docs/tool-compact.md#ölçüm
+# Bkz. docs/context-saver.md#ölçüm
 ```
 
 ## Repo Yapısı
@@ -67,13 +67,13 @@ node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 ```
 opencode-plugins/
 ├── plugins/
-│   ├── tool-compact.ts   # DHS PTC-mode adaptasyonu
-│   ├── tool-compact.js   # derlenmiş
-│   ├── build-hooks.ts
-│   └── build-hooks.js
+│   ├── context-saver.ts   # DHS PTC-mode adaptasyonu
+│   ├── context-saver.js   # derlenmiş
+│   ├── build-tracker.ts
+│   └── build-tracker.js
 ├── docs/
-│   ├── tool-compact.md
-│   └── build-hooks.md
+│   ├── context-saver.md
+│   └── build-tracker.md
 ├── examples/
 │   └── opencode.jsonc
 ├── package.json

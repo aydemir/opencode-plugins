@@ -24,7 +24,7 @@ function formatCompactLog(entries) {
     });
     return lines.join("\n");
 }
-export const ToolCompactPlugin = async (input, options) => {
+export const ToolCompactPlugin = async ({ client }, options) => {
     const config = { ...DEFAULT_CONFIG, ...(options ?? {}) };
     const logs = [];
     const startTimes = new Map();
@@ -67,7 +67,7 @@ export const ToolCompactPlugin = async (input, options) => {
                 output.output = `[${extractSummary(t.tool, t.args ?? {})}]\n${rawOutput.slice(0, 200)}...\n⏱️ ${duration}ms`;
             }
         },
-        "chat.message": async (_msgInput, msgOutput) => {
+        "chat.message": async (_msgInput, _msgOutput) => {
             if (logs.length === 0 || !config.injectAsSummary || turnCallCount === 0)
                 return;
             const summary = formatCompactLog(logs);
@@ -79,17 +79,17 @@ export const ToolCompactPlugin = async (input, options) => {
             if (recentErrors > 0)
                 lines.push(`⚠️ ${recentErrors} hata oluştu`);
             lines.push("", summary, "", "📊 Araç sonuçları özlendi — context tasarruf edilmiştir", "");
-            msgOutput.parts.push({ type: "text", text: lines.join("\n") });
+            await client.tui.showToast({ body: { message: lines.join("\n"), variant: "info" } });
             turnCallCount = 0;
         },
         event: async ({ event }) => {
-            if (event.type === "session.idle") {
+            if (event.type === "session.idle" && logs.length > 0) {
                 const total = logs.length;
                 const errors = logs.filter((e) => e.error).length;
-                console.log(`[Tool Compact] 📊 Oturum tamamlandı: ${total} çağrı, ${errors} hata`);
+                await client.app.log({ body: { service: "context-saver", level: "info", message: `Oturum tamamlandı: ${total} çağrı, ${errors} hata`, extra: { total, errors } } });
             }
         },
     };
 };
 export default ToolCompactPlugin;
-//# sourceMappingURL=tool-compact.js.map
+//# sourceMappingURL=context-saver.js.map
