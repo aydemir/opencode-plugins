@@ -1,4 +1,12 @@
 import type { Plugin } from "@opencode-ai/plugin"
+import {
+  codePointLength,
+  extractErrors,
+  extractSummarySafe,
+  PRUNE_MARKER,
+  pruneMiddle,
+  resolvePruneBudget,
+} from "./lib/prune.js"
 
 interface ToolLogEntry {
   name: string
@@ -12,27 +20,41 @@ interface ToolLogEntry {
 interface CompactConfig {
   maxLogEntries: number
   compressThreshold: number
+  headChars: number
+  tailChars: number
+  maxCharsPerKey: number
+  maxSummaryChars: number
+  errorMaxLines: number
+  errorTailLines: number
   injectAsSummary: boolean
 }
 
 const DEFAULT_CONFIG: CompactConfig = {
   maxLogEntries: 50,
   compressThreshold: 500,
+  headChars: 100,
+  tailChars: 50,
+  maxCharsPerKey: 40,
+  maxSummaryChars: 200,
+  errorMaxLines: 15,
+  errorTailLines: 5,
   injectAsSummary: true,
 }
 
-function extractErrors(output: string): string[] {
-  return output
-    .split("\n")
-    .filter((line) => /\berror\b|\bfailed\b|\bFAILED\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError/i.test(line))
-    .slice(0, 15)
-}
-
-function extractSummary(name: string, args: Record<string, unknown>): string {
-  const keys = Object.keys(args)
-  const keySummary = keys.slice(0, 3).map((k) => `${k}=${JSON.stringify(args[k])}`).join(", ")
-  const extra = keys.length > 3 ? ` (+${keys.length - 3} param)` : ""
-  return `${name}(${keySummary}${extra})`
+function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
+  const cfg: CompactConfig = { ...DEFAULT_CONFIG, ...raw }
+  resolvePruneBudget({
+    compressThreshold: cfg.compressThreshold,
+    headChars: cfg.headChars,
+    tailChars: cfg.tailChars,
+  })
+  if (cfg.headChars < 0 || cfg.tailChars < 0) {
+    throw new Error(`context-saver: headChars/tailChars must be >= 0`)
+  }
+  if (cfg.maxCharsPerKey < 1 || cfg.maxSummaryChars < 10) {
+    throw new Error(`context-saver: maxCharsPerKey>=1, maxSummaryChars>=10 required`)
+  }
+  return cfg
 }
 
 function formatCompactLog(entries: ToolLogEntry[]): string {
@@ -40,13 +62,13 @@ function formatCompactLog(entries: ToolLogEntry[]): string {
   const lines = recent.map((e) => {
     const status = e.error ? "❌" : "✅"
     const dur = e.duration < 1000 ? `${e.duration}ms` : `${(e.duration / 1000).toFixed(1)}s`
-    return `${status} [${dur}] ${extractSummary(e.name, e.args)}`
+    return `${status} [${dur}] ${extractSummarySafe(e.name, e.args)}`
   })
   return lines.join("\n")
 }
 
 export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, unknown>) => {
-  const config: CompactConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
+  const config = resolveConfig((options ?? {}) as Partial<CompactConfig>)
   const logs: ToolLogEntry[] = []
   const startTimes = new Map<string, number>()
   let turnCallCount = 0
@@ -73,14 +95,40 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       const duration = Date.now() - startTime
       startTimes.delete(t.callID)
 
-      const rawOutput = output.output ?? ""
-      const errors = extractErrors(rawOutput)
+      const rawOutput: string =
+        typeof output.output === "string"
+          ? output.output
+          : output.output == null
+            ? ""
+            : (() => {
+                try {
+                  return JSON.stringify(output.output)
+                } catch {
+                  return String(output.output)
+                }
+              })()
+
+      const errors = extractErrors(rawOutput, {
+        maxLines: config.errorMaxLines,
+        tailLines: config.errorTailLines,
+      })
       const isError = errors.length > 0
+      const summary = extractSummarySafe(t.tool, t.args ?? {}, {
+        maxCharsPerKey: config.maxCharsPerKey,
+        maxSummaryChars: config.maxSummaryChars,
+      })
 
       const entry: ToolLogEntry = {
         name: t.tool,
         args: t.args ?? {},
-        result: errors.length > 0 ? errors.join("\n") : (rawOutput.length > config.compressThreshold ? rawOutput.slice(0, config.compressThreshold) + "..." : rawOutput),
+        result: isError
+          ? errors.join("\n")
+          : codePointLength(rawOutput) > config.compressThreshold
+            ? pruneMiddle(rawOutput, {
+                headChars: config.headChars,
+                tailChars: config.tailChars,
+              })
+            : rawOutput,
         duration,
         timestamp: Date.now(),
         error: isError,
@@ -89,10 +137,17 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       addLog(entry)
 
       if (isError) {
-        output.output = `⚠️ ${extractSummary(t.tool, t.args ?? {})}\n${errors.join("\n")}\n⏱️ ${duration}ms`
-      } else if (rawOutput.length > config.compressThreshold) {
-        output.output = `[${extractSummary(t.tool, t.args ?? {})}]\n${rawOutput.slice(0, 200)}...\n⏱️ ${duration}ms`
+        output.output = `⚠️ ${summary}\n${errors.join("\n")}\n⏱️ ${duration}ms`
+      } else if (codePointLength(rawOutput) > config.compressThreshold) {
+        // Head+marker+tail. Marker'ın son halini pruneMiddle üretir; burada
+        // tekrar PRUNE_MARKER kullanma — pruneMiddle zaten ekledi.
+        const trimmed = pruneMiddle(rawOutput, {
+          headChars: config.headChars,
+          tailChars: config.tailChars,
+        })
+        output.output = `[${summary}]\n${trimmed}\n⏱️ ${duration}ms`
       }
+      // else: küçük output'a dokunma, ham kalsın.
     },
 
     "chat.message": async (_msgInput, _msgOutput) => {
