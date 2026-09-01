@@ -1,38 +1,35 @@
+import { isBuildCommand } from "./lib/prune.js";
 const DEFAULT_CONFIG = {
     thresholdMs: 120000,
-    buildKeywords: [
-        "build", "compile", "make", "cargo", "npm run", "yarn", "pnpm",
-        "bun run", "tsc", "webpack", "vite", "esbuild", "rollup",
-        "tailwind", "next build", "gradle", "maven", "docker build",
-        "pip install", "pip3 install", "forge", "rain", "rgsx",
-    ],
 };
-function createSession(config) {
-    return { active: false, command: "", callIDs: [], startTime: 0, status: "idle", config, buildCallID: null };
-}
-function isBuildCommand(command, keywords) {
-    return keywords.some((kw) => command.toLowerCase().includes(kw.toLowerCase()));
+function createSession() {
+    return { active: false, command: "", callIDs: [], startTime: 0, status: "idle", buildCallID: null };
 }
 function formatDuration(ms) {
     const s = Math.floor(ms / 1000);
     return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 export const BuildHooksPlugin = async (input, options) => {
-    const config = {
-        ...DEFAULT_CONFIG,
-        ...(options ?? {}),
-        buildKeywords: options?.buildKeywords ?? DEFAULT_CONFIG.buildKeywords,
-    };
-    const sess = createSession(config);
+    const config = { ...DEFAULT_CONFIG, ...(options ?? {}) };
+    const sess = createSession();
     const pendingCalls = new Map();
-    let lastBuildMessage = null;
+    const client = input.client;
     const endSession = (status) => {
         const duration = Date.now() - sess.startTime;
-        const msg = status === "success"
-            ? `✅ Build finished (${formatDuration(duration)})`
-            : `❌ Build failed`;
-        console.log(`[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${sess.command} — ${formatDuration(duration)}`);
-        lastBuildMessage = msg;
+        const command = sess.command;
+        console.log(`[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${formatDuration(duration)}`);
+        // Log-only event: durable ama surface'e katılmaz.
+        // output.output'a yazmıyoruz → context-saver kırpabilir, sorun değil.
+        if (client?.app?.log) {
+            void client.app.log({
+                body: {
+                    service: "build-tracker",
+                    level: status === "failed" ? "error" : "info",
+                    message: `Build ${status}: ${command} (${formatDuration(duration)})`,
+                    extra: { status, duration, command },
+                },
+            });
+        }
         sess.active = false;
         sess.command = "";
         sess.callIDs = [];
@@ -41,25 +38,25 @@ export const BuildHooksPlugin = async (input, options) => {
         sess.buildCallID = null;
     };
     const getCommandFromArgs = (args) => {
-        if (!args)
+        if (!args || typeof args !== "object")
             return "";
-        if (typeof args.command === "string")
-            return args.command;
-        if (typeof args.cmd === "string")
-            return args.cmd;
-        if (typeof args.input === "string")
-            return args.input;
+        const a = args;
+        if (typeof a.command === "string")
+            return a.command;
+        if (typeof a.cmd === "string")
+            return a.cmd;
+        if (typeof a.input === "string")
+            return a.input;
         return "";
     };
     return {
         async dispose() {
             pendingCalls.clear();
-            lastBuildMessage = null;
         },
         "tool.execute.before": async (t, output) => {
-            const args = output?.args ?? t?.args ?? {};
+            const args = output?.args ?? t.args ?? {};
             const cmd = getCommandFromArgs(args);
-            if (cmd && isBuildCommand(cmd, config.buildKeywords)) {
+            if (cmd && isBuildCommand(cmd)) {
                 if (sess.active)
                     endSession("failed");
                 sess.active = true;
@@ -67,7 +64,6 @@ export const BuildHooksPlugin = async (input, options) => {
                 sess.startTime = Date.now();
                 sess.status = "running";
                 sess.buildCallID = t.callID;
-                lastBuildMessage = `🏗️ Build started: ${cmd}`;
                 console.log(`[Build Hook] 🔨 onBuildStart: ${cmd}`);
             }
             if (sess.active) {
@@ -82,17 +78,21 @@ export const BuildHooksPlugin = async (input, options) => {
             pendingCalls.delete(t.callID);
             const duration = Date.now() - startTime;
             const outStr = output.output ?? "";
-            const hasError = /\berror\b|\bfailed\b|\bFAILED\b/i.test(outStr);
+            const hasError = /\berror\b|\bfailed\b/i.test(outStr);
             const isBuildCall = sess.buildCallID === t.callID;
-            // UI: build started mesajını output'a ekle (TUI'de görünsün)
-            const startedMsg = sess.command ? `🏗️ Build started: ${sess.command}` : null;
+            // Surface'e (output.output) yazmıyoruz — context-saver kırpabilir,
+            // sıra bağımlılığı ortadan kalkar. Bilgi metadata'da log-only durur.
+            const out = output;
+            const buildMeta = {
+                status: hasError ? "failed" : "success",
+                duration,
+                command: sess.command,
+                at: Date.now(),
+                thresholdExceeded: Date.now() - sess.startTime >= config.thresholdMs,
+            };
+            out.metadata = { ...(out.metadata ?? {}), build: buildMeta };
             if (hasError) {
                 console.log(`[Build Hook] ❌ onBuildFailure: ${t.tool} — errors detected in ${formatDuration(duration)}`);
-                const finishedMsg = `❌ Build failed`;
-                if (isBuildCall) {
-                    ;
-                    output.output = `${startedMsg ? startedMsg + "\n" : ""}${outStr}\n${finishedMsg}`;
-                }
                 return endSession("failed");
             }
             if (isBuildCall) {
@@ -100,8 +100,6 @@ export const BuildHooksPlugin = async (input, options) => {
                 if (dur >= config.thresholdMs) {
                     console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
                 }
-                const finishedMsg = `✅ Build finished (${formatDuration(dur)})`;
-                output.output = `${startedMsg ? startedMsg + "\n" : ""}${outStr}\n${finishedMsg}`;
                 return endSession("success");
             }
             const dur = Date.now() - sess.startTime;
@@ -109,24 +107,20 @@ export const BuildHooksPlugin = async (input, options) => {
                 console.log(`[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`);
             }
         },
-        "chat.message": async (_msgInput, _msgOutput) => {
-            // TUI fix: build bildirimi artik mesaj yazma alanina enjekte edilmiyor
-            if (lastBuildMessage) {
-                lastBuildMessage = null;
-            }
-        },
+        // chat.message kancası kaldırıldı: eski kod msgOutput.parts.push ile
+        // context'i kirletiyordu, lastBuildMessage ölü koddu. Build bilgisi
+        // artık output.metadata.build'de — surface'i kirletmez.
         event: async ({ event }) => {
             const e = event;
             const type = e.type;
             if (type === "command.executed" || type === "tui.command.execute") {
                 const cmd = e.command ?? e.data?.command ?? "";
-                if (typeof cmd === "string" && isBuildCommand(cmd, config.buildKeywords)) {
+                if (typeof cmd === "string" && isBuildCommand(cmd)) {
                     if (!sess.active) {
                         sess.active = true;
                         sess.command = cmd;
                         sess.startTime = Date.now();
                         sess.status = "running";
-                        lastBuildMessage = `🏗️ Build started: ${cmd}`;
                         console.log(`[Build Hook] 🔨 onBuildStart (event): ${cmd}`);
                     }
                 }

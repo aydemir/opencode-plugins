@@ -1,5 +1,7 @@
 # opencode-plugins
 
+> v0.1.0 — OpenCode için eklenti koleksiyonu
+
 OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context-saver` (`context-saver`, DHS PTC-mode)** context tasarrufu ve **`opencode-build-tracker` (`build-tracker`)** build yaşam döngüsü kancaları.
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
@@ -9,7 +11,7 @@ OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context
 | Eklenti | Dosya | Amaç | Tasarruf |
 |---------|-------|------|----------|
 | **context-saver** | `plugins/context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
-| **build-tracker** | `plugins/build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onProgress / onBuildFailure / onThresholdExceeded` kancaları | — |
+| **build-tracker** | `plugins/build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
 
 Detaylı doküman: `docs/context-saver.md` ve `docs/build-tracker.md`
 

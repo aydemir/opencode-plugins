@@ -54,3 +54,19 @@ node /tmp/h2.mjs   # minimal build-tracker smoke test
 ```
 
 Ayrıntılı JSON: `tool-calls.json`
+
+## Test Çalıştırma
+
+Yeni eklenen `test-plugins.mjs` (242 satır, 0.1.0) tüm eklentileri doğrular:
+
+```bash
+node test-plugins.mjs
+# veya
+npm test
+```
+
+- **Hata output**: `extractErrors` ile filtrelenmiş satırlar korunur.
+- **Prune**: `pruneMiddle` boş `matches` için `[]` döner (tail-only bug fix).
+- **Build tracker**: `isBuildCommand` segment kontrolü.
+
+Detay: `plugins/lib/prune.ts:197-199` ve `test-plugins.mjs:1-50`.

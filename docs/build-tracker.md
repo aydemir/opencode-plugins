@@ -32,14 +32,14 @@ command.execute.before → isBuildCommand(cmd, keywords)? → sess.active=true, 
 tool.execute.before    → pendingCalls.set(callID), sess.callIDs.push(callID) (build-tracker.ts:84-88)
 tool.execute.after     → hasError? (/\\berror\\b|\\bfailed\\b/i) → endSession("failed")
                         dur>=thresholdMs? → console.log onThresholdExceeded (build-tracker.ts:90-108)
-event(session.next.tool.success|failed) → onProgress / onBuildFailure (build-tracker.ts:110-132)
+event(session.next.tool.success|failed) → onBuildSuccess / onBuildFailure (build-tracker.ts:110-132)
 endSession(status)     → console.log onBuildSuccess/onBuildFailure + reset (build-tracker.ts:53-63)
 ```
 
 ### Kancalar (console.log)
 
 - `onBuildStart`: `[Build Hook] 🔨 onBuildStart: <cmd>` (`build-tracker.ts:81`)
-- `onProgress`: `[Build Hook] 🔄 onProgress: tool success event` (`build-tracker.ts:119`)
+- `onBuildSuccess`: `[Build Hook] 🔄 onBuildSuccess: tool success event` (`build-tracker.ts:119`)
 - `onBuildFailure`: `[Build Hook] ❌ onBuildFailure: <reason>` (`build-tracker.ts:99,129`)
 - `onBuildSuccess`: `[Build Hook] ✅ onBuildSuccess: <cmd> — <dur>` (`build-tracker.ts:57`)
 - `onThresholdExceeded`: `[Build Hook] ⏱️ onThresholdExceeded: <dur> (threshold: ...)` (`build-tracker.ts:106`)

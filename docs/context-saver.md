@@ -36,7 +36,12 @@ event(session.completed) → console.log oturum özeti (context-saver.ts:115-120
 
 ### Yardımcılar
 
-- `extractErrors(output)` (`context-saver.ts:24-29`): satır bazlı filtre, regex `/\berror\b|\bfailed\b|\bFAILED\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError/i`, ilk 15 satır.
+- `pruneMiddle(text, { head, tail, marker })` (`plugins/lib/prune.ts:30-60`): ortayı kırpar, baş ve sonu korur. `extractErrors` boş dizi dönerse (`matches.length === 0`) doğrudan `[]` döner — tail-only hatası önlenir (fix 916512a).
+- `extractSummarySafe(obj, budget)` (`plugins/lib/prune.ts:79-120`): per-key + toplam bütçe ile güvenli özet.
+- `isBuildCommand(cmd)` (`plugins/lib/prune.ts:130-150`): shell operatörlerine göre segmentlere ayırır, build komutunu algılar.
+- `PRUNE_MARKER`, `codePointLength`, `resolvePruneBudget` yardımcıları (`plugins/lib/prune.ts:1-30`).
+
+- `extractErrors(output)` (`plugins/lib/prune.ts:189-200`): satır bazlı filtre, regex `/\berror\b|\bfailed\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError|^Cannot find|^Unable to|^Unresolved|^npm ERR!|^fatal|^panic/i`, ilk 15 satır.
 - `extractSummary(name, args)` (`context-saver.ts:31-36`): `name(k1="v1", k2="v2" (+N param))` — ilk 3 anahtar.
 - `formatCompactLog(entries)` (`context-saver.ts:38-46`): son 20 log, `✅/❌ [dur] summary`.
 
