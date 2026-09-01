@@ -4,3 +4,7 @@ plugins/dist/
 *.log
 .DS_Store
 .env
+# generated from plugins/lib/prune.ts - build tek kaynak
+plugins/lib/*.js
+plugins/lib/*.d.ts
+plugins/lib/*.map

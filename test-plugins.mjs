@@ -8,8 +8,8 @@ import {
   extractErrors,
   resolvePruneBudget,
 } from "./dist/plugins/lib/prune.js";
-import { ToolCompactPlugin } from "./dist/plugins/context-saver.js";
-import { BuildHooksPlugin } from "./dist/plugins/build-tracker.js";
+import { ToolCompactPlugin } from "./dist/plugins/opencode-context-saver.js";
+import { BuildHooksPlugin } from "./dist/plugins/opencode-build-tracker.js";
 
 let pass = 0, fail = 0;
 function ok(name, fn) {
@@ -94,8 +94,8 @@ ok("extractSummarySafe handles missing args", () => {
   assert.equal(s, "read(, )"); // parts = ["read(", ")"] joined with ", "
 });
 
-// --- context-saver plugin ---
-await okAsync("context-saver: small output untouched", async () => {
+// --- opencode-context-saver plugin ---
+await okAsync("opencode-context-saver: small output untouched", async () => {
   const logs = [];
   const fakeClient = { tui: { showToast: async (m) => logs.push(m) }, app: { log: async () => {} } };
   const plugin = await ToolCompactPlugin({ client: fakeClient }, {});
@@ -107,7 +107,7 @@ await okAsync("context-saver: small output untouched", async () => {
   assert.equal(output.output, "hi"); // small -> untouched
 });
 
-await okAsync("context-saver: large output pruned", async () => {
+await okAsync("opencode-context-saver: large output pruned", async () => {
   const fakeClient = { tui: { showToast: async () => {} }, app: { log: async () => {} } };
   const plugin = await ToolCompactPlugin({ client: fakeClient }, {});
   const big = "A".repeat(300) + "B".repeat(300) + "C".repeat(300);
@@ -120,7 +120,7 @@ await okAsync("context-saver: large output pruned", async () => {
   assert.ok(codePointLength(output.output) < big.length);
 });
 
-await okAsync("context-saver: error output extracted with warning", async () => {
+await okAsync("opencode-context-saver: error output extracted with warning", async () => {
   const fakeClient = { tui: { showToast: async () => {} }, app: { log: async () => {} } };
   const plugin = await ToolCompactPlugin({ client: fakeClient }, {});
   const errOut = "line1\nerror: build failed\nTypeError: x\nline tail";
@@ -132,7 +132,7 @@ await okAsync("context-saver: error output extracted with warning", async () => 
   assert.ok(output.output.includes("error: build failed"));
 });
 
-await okAsync("context-saver: handles non-string output via JSON.stringify", async () => {
+await okAsync("opencode-context-saver: handles non-string output via JSON.stringify", async () => {
   const fakeClient = { tui: { showToast: async () => {} }, app: { log: async () => {} } };
   const plugin = await ToolCompactPlugin({ client: fakeClient }, {});
   const t = { callID: "4", tool: "read", args: { filePath: "/foo" } };
@@ -143,7 +143,7 @@ await okAsync("context-saver: handles non-string output via JSON.stringify", asy
   assert.ok(output.output !== null);
 });
 
-await okAsync("context-saver: chat.message emits toast", async () => {
+await okAsync("opencode-context-saver: chat.message emits toast", async () => {
   let toastMsg = "";
   const fakeClient = { tui: { showToast: async ({ body }) => { toastMsg = body.message; } }, app: { log: async () => {} } };
   const plugin = await ToolCompactPlugin({ client: fakeClient }, {});
@@ -155,8 +155,8 @@ await okAsync("context-saver: chat.message emits toast", async () => {
   assert.ok(toastMsg.includes("bash("));
 });
 
-// --- build-tracker plugin ---
-await okAsync("build-tracker: detects build command on before", async () => {
+// --- opencode-build-tracker plugin ---
+await okAsync("opencode-build-tracker: detects build command on before", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -172,7 +172,7 @@ await okAsync("build-tracker: detects build command on before", async () => {
   console.log = origLog;
 });
 
-await okAsync("build-tracker: non-build command does not start session", async () => {
+await okAsync("opencode-build-tracker: non-build command does not start session", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -188,7 +188,7 @@ await okAsync("build-tracker: non-build command does not start session", async (
   console.log = origLog;
 });
 
-await okAsync("build-tracker: chained command detected", async () => {
+await okAsync("opencode-build-tracker: chained command detected", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -200,7 +200,7 @@ await okAsync("build-tracker: chained command detected", async () => {
   console.log = origLog;
 });
 
-await okAsync("build-tracker: event command.executed starts session", async () => {
+await okAsync("opencode-build-tracker: event command.executed starts session", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -211,8 +211,8 @@ await okAsync("build-tracker: event command.executed starts session", async () =
   console.log = origLog;
 });
 
-// --- build-tracker: false-positive guard ---
-await okAsync("build-tracker: false positive guard (comment + help text)", async () => {
+// --- opencode-build-tracker: false-positive guard ---
+await okAsync("opencode-build-tracker: false positive guard (comment + help text)", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -230,7 +230,7 @@ await okAsync("build-tracker: false positive guard (comment + help text)", async
   console.log = origLog;
 });
 
-await okAsync("build-tracker: false positive guard (help text)", async () => {
+await okAsync("opencode-build-tracker: false positive guard (help text)", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -248,7 +248,7 @@ await okAsync("build-tracker: false positive guard (help text)", async () => {
   console.log = origLog;
 });
 
-await okAsync("build-tracker: real build error still detected", async () => {
+await okAsync("opencode-build-tracker: real build error still detected", async () => {
   const logs = [];
   const origLog = console.log;
   console.log = (...a) => logs.push(a.join(" "));
@@ -268,8 +268,8 @@ await okAsync("build-tracker: real build error still detected", async () => {
   console.log = origLog;
 });
 
-// --- build-tracker: TUI toast fallback ---
-await okAsync("build-tracker: TUI toast on success", async () => {
+// --- opencode-build-tracker: TUI toast fallback ---
+await okAsync("opencode-build-tracker: TUI toast on success", async () => {
   const toasts = [];
   const fakeClient = {
     app: { log: async () => {} },
@@ -286,7 +286,7 @@ await okAsync("build-tracker: TUI toast on success", async () => {
   assert.equal(toasts[0].body.variant, "info");
 });
 
-await okAsync("build-tracker: TUI toast on failure with error variant", async () => {
+await okAsync("opencode-build-tracker: TUI toast on failure with error variant", async () => {
   const toasts = [];
   const fakeClient = {
     app: { log: async () => {} },
@@ -302,7 +302,7 @@ await okAsync("build-tracker: TUI toast on failure with error variant", async ()
   assert.equal(toasts[0].body.variant, "error");
 });
 
-await okAsync("build-tracker: no toast when tui API missing (graceful)", async () => {
+await okAsync("opencode-build-tracker: no toast when tui API missing (graceful)", async () => {
   const fakeClient = { app: { log: async () => {} } };
   const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
   const t = { callID: "notoast1", tool: "bash", args: { command: "npm run build" } };

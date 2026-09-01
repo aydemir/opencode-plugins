@@ -1,12 +1,12 @@
 # opencode-context-saver — DHS PTC-mode
 
-`plugins/context-saver.ts` (`125 satır`) — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
+`plugins/opencode-context-saver.ts` (`125 satır`) — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
 
 ## Kaynak
 
-- Dosya: `plugins/context-saver.ts:1-125`
-- Kaynak kopya: `tmp/context-saver-full.ts` (codegraph ile doğrulandı, verbatim)
-- Derlenmiş: `plugins/context-saver.js`
+- Dosya: `plugins/opencode-context-saver.ts:1-125`
+- Kaynak kopya: `tmp/opencode-context-saver-full.ts` (codegraph ile doğrulandı, verbatim)
+- Derlenmiş: `plugins/opencode-context-saver.js`
 
 ## Sözleşme
 
@@ -20,18 +20,18 @@ interface CompactConfig {
 }
 ```
 
-`ToolCompactPlugin(input, options?)` ile override edilebilir (`context-saver.ts:48-49`).
+`ToolCompactPlugin(input, options?)` ile override edilebilir (`opencode-context-saver.ts:48-49`).
 
 ### Akış
 
 ```
 tool.execute.before → startTimes.set(callID, Date.now())
 tool.execute.after  → extractErrors(rawOutput) → isError?
-                      ├─ isError:  output = `⚠️ {summary}\n{errors}\n⏱️ {dur}ms` (context-saver.ts:91-92)
-                      └─ !isError && raw>500: output = `[ {summary}]\n{raw.slice(0,200)}...\n⏱️ {dur}ms` (context-saver.ts:93-94)
+                      ├─ isError:  output = `⚠️ {summary}\n{errors}\n⏱️ {dur}ms` (opencode-context-saver.ts:91-92)
+                      └─ !isError && raw>500: output = `[ {summary}]\n{raw.slice(0,200)}...\n⏱️ {dur}ms` (opencode-context-saver.ts:93-94)
                       └─ else: raw olduğu gibi
-chat.message        → 📋 [Araç Özeti] {total} çağrı + formatCompactLog(last20) (context-saver.ts:98-112)
-event(session.completed) → console.log oturum özeti (context-saver.ts:115-120)
+chat.message        → 📋 [Araç Özeti] {total} çağrı + formatCompactLog(last20) (opencode-context-saver.ts:98-112)
+event(session.completed) → console.log oturum özeti (opencode-context-saver.ts:115-120)
 ```
 
 ### Yardımcılar
@@ -42,8 +42,8 @@ event(session.completed) → console.log oturum özeti (context-saver.ts:115-120
 - `PRUNE_MARKER`, `codePointLength`, `resolvePruneBudget` yardımcıları (`plugins/lib/prune.ts:1-30`).
 
 - `extractErrors(output)` (`plugins/lib/prune.ts:189-200`): satır bazlı filtre, regex `/\berror\b|\bfailed\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError|^Cannot find|^Unable to|^Unresolved|^npm ERR!|^fatal|^panic/i`, ilk 15 satır.
-- `extractSummary(name, args)` (`context-saver.ts:31-36`): `name(k1="v1", k2="v2" (+N param))` — ilk 3 anahtar.
-- `formatCompactLog(entries)` (`context-saver.ts:38-46`): son 20 log, `✅/❌ [dur] summary`.
+- `extractSummary(name, args)` (`opencode-context-saver.ts:31-36`): `name(k1="v1", k2="v2" (+N param))` — ilk 3 anahtar.
+- `formatCompactLog(entries)` (`opencode-context-saver.ts:38-46`): son 20 log, `✅/❌ [dur] summary`.
 
 ## Ölçüm (gerçek dosyalarla)
 
@@ -68,7 +68,7 @@ Token tahmini (~4 char/token): 20k → 0.5k token.
 
 ```jsonc
 {
-  "plugin": ["./plugins/context-saver.ts"]
+  "plugin": ["./plugins/opencode-context-saver.ts"]
 }
 ```
 
@@ -82,7 +82,7 @@ ToolCompactPlugin(input, { maxLogEntries: 30, compressThreshold: 800, injectAsSu
 ## Dikkat
 
 - `error` kelimesi içermeyen büyük çıktılar 200 char'a kesilir — ortadaki kritik detay kaybolabilir. Bu bilinçli trade-off (PTC-mode).
-- `maxLogEntries` aşıldığında en eski log `shift()` ile atılır (`context-saver.ts:56`).
+- `maxLogEntries` aşıldığında en eski log `shift()` ile atılır (`opencode-context-saver.ts:56`).
 
 ## Test
 

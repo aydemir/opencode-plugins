@@ -2,7 +2,7 @@
 
 > v0.1.0 — OpenCode için eklenti koleksiyonu
 
-OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context-saver` (`context-saver`, DHS PTC-mode)** context tasarrufu ve **`opencode-build-tracker` (`build-tracker`)** build yaşam döngüsü kancaları.
+OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context-saver` ( DHS PTC-mode)** context tasarrufu ve **`opencode-build-tracker` (`opencode-build-tracker`)** build yaşam döngüsü kancaları.
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
 
@@ -10,10 +10,10 @@ OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context
 
 | Eklenti | Dosya | Amaç | Tasarruf |
 |---------|-------|------|----------|
-| **context-saver** | `plugins/context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
-| **build-tracker** | `plugins/build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
+| **opencode-context-saver** | `plugins/opencode-context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
+| **opencode-build-tracker** | `plugins/opencode-build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
 
-Detaylı doküman: `docs/context-saver.md` ve `docs/build-tracker.md`
+Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-tracker.md`
 
 ## Kurulum
 
@@ -21,8 +21,8 @@ Detaylı doküman: `docs/context-saver.md` ve `docs/build-tracker.md`
 
 ```bash
 git clone https://github.com/<org>/opencode-plugins.git
-cp opencode-plugins/plugins/context-saver.ts ~/.config/opencode/plugins/
-cp opencode-plugins/plugins/build-tracker.ts ~/.config/opencode/plugins/
+cp opencode-plugins/plugins/opencode-context-saver.ts ~/.config/opencode/plugins/
+cp opencode-plugins/plugins/opencode-build-tracker.ts ~/.config/opencode/plugins/
 ```
 
 ### 2) Seçenek B — Doğrudan opencode.jsonc ile
@@ -34,8 +34,8 @@ cp opencode-plugins/plugins/build-tracker.ts ~/.config/opencode/plugins/
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     "opencode-mem",
-    "./plugins/context-saver.ts",
-    "./plugins/build-tracker.ts"
+    "./plugins/opencode-context-saver.ts",
+    "./plugins/opencode-build-tracker.ts"
   ]
 }
 ```
@@ -57,11 +57,11 @@ npm run build
 ## Hızlı Doğrulama
 
 ```bash
-# context-saver regex'i manuel test et
+# opencode-context-saver regex'i manuel test et
 node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 
 # 3 dosya ile tasarruf ölçümü (repo içindeki ölçüm script'i ile aynı mantık)
-# Bkz. docs/context-saver.md#ölçüm
+# Bkz. docs/opencode-context-saver.md#ölçüm
 ```
 
 ## Repo Yapısı
@@ -69,13 +69,13 @@ node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 ```
 opencode-plugins/
 ├── plugins/
-│   ├── context-saver.ts   # DHS PTC-mode adaptasyonu
-│   ├── context-saver.js   # derlenmiş
-│   ├── build-tracker.ts
-│   └── build-tracker.js
+│   ├── opencode-context-saver.ts   # DHS PTC-mode adaptasyonu
+│   ├── opencode-context-saver.js   # derlenmiş
+│   ├── opencode-build-tracker.ts
+│   └── opencode-build-tracker.js
 ├── docs/
-│   ├── context-saver.md
-│   └── build-tracker.md
+│   ├── opencode-context-saver.md
+│   └── opencode-build-tracker.md
 ├── examples/
 │   └── opencode.jsonc
 ├── package.json

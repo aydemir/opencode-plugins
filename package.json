@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (context-saver, DHS PTC-mode) ve opencode-build-tracker (build-tracker)",
+  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (opencode-context-saver, DHS PTC-mode) ve opencode-build-tracker (opencode-build-tracker)",
   "workspaces": [
     "plugins/*"
   ],
@@ -18,8 +18,8 @@
     "opencode-plugin",
     "opencode-context-saver",
     "opencode-build-tracker",
-    "context-saver",
-    "build-tracker",
+    "opencode-context-saver",
+    "opencode-build-tracker",
     "dhs",
     "ptc"
   ],
@@ -35,10 +35,10 @@
     "node": ">=18"
   },
   "exports": {
-    "./build-tracker": "./dist/plugins/build-tracker.js",
-    "./context-saver": "./dist/plugins/context-saver.js",
-    "./opencode-build-tracker": "./dist/plugins/build-tracker.js",
-    "./opencode-context-saver": "./dist/plugins/context-saver.js"
+    "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
+    "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
+    "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
+    "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js"
   },
   "files": [
     "dist",

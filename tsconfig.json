@@ -12,6 +12,13 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["plugins/*.ts", "docs/**/*.ts"],
-  "exclude": ["node_modules", "dist", "plugins/dist"]
+  "include": [
+    "plugins/**/*.ts",
+    "docs/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "plugins/dist"
+  ]
 }

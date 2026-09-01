@@ -1,8 +1,8 @@
 {
   "generated": "2026-09-01",
   "plugins": [
-    "build-tracker",
-    "context-saver"
+    "opencode-build-tracker",
+    "opencode-context-saver"
   ],
   "build_tracker_tool_calls": [
     {
@@ -147,8 +147,8 @@
     "tsconfig": "tsconfig.json",
     "outDir": "dist",
     "artifacts": [
-      "dist/plugins/build-tracker.js",
-      "dist/plugins/context-saver.js",
+      "dist/plugins/opencode-build-tracker.js",
+      "dist/plugins/opencode-context-saver.js",
       "dist/plugins/lib/prune.js"
     ]
   }

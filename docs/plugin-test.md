@@ -8,8 +8,8 @@ npm run lint    # tsc --noEmit
 ```
 
 Çıktılar:
-- `dist/plugins/build-tracker.js` + `.d.ts` + `.map`
-- `dist/plugins/context-saver.js` + `.d.ts` + `.map`
+- `dist/plugins/opencode-build-tracker.js` + `.d.ts` + `.map`
+- `dist/plugins/opencode-context-saver.js` + `.d.ts` + `.map`
 - `dist/plugins/lib/prune.js`
 
 Doğrulama:
@@ -21,7 +21,7 @@ Doğrulama:
 
 ## Araç Çağrıları
 
-### build-tracker (`tool.execute.before` / `tool.execute.after`)
+### opencode-build-tracker (`tool.execute.before` / `tool.execute.after`)
 
 | # | Araç | Args | Hook | Beklenen |
 |---|------|------|------|----------|
@@ -31,7 +31,7 @@ Doğrulama:
 | 4 | bash | `ls -la` | before | no-op (isBuildCommand=false) |
 | 5 | bash | `tsc ...` + `pnpm build` | before x2 | aynı session'da toplanır |
 
-### context-saver (`tool.execute.after`)
+### opencode-context-saver (`tool.execute.after`)
 
 - **Büyük output**: 10k char → `pruneMiddle(head=500,tail=500)` → ~1000+marker
 - **Hata output**: `extractErrors` ile `ERROR|TypeError` satırları korunur
@@ -50,7 +50,7 @@ pruneMiddle("A".repeat(2000), {headChars:100, tailChars:100})
 
 ```bash
 node test-harness.mjs
-node /tmp/h2.mjs   # minimal build-tracker smoke test
+node /tmp/h2.mjs   # minimal opencode-build-tracker smoke test
 ```
 
 Ayrıntılı JSON: `tool-calls.json`
