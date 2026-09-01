@@ -238,5 +238,64 @@ await okAsync("build-tracker: event command.executed starts session", async () =
   console.log = origLog;
 });
 
+// --- build-tracker: false-positive guard ---
+await okAsync("build-tracker: false positive guard (comment + help text)", async () => {
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...a) => logs.push(a.join(" "));
+  const fakeClient = { app: { log: async () => {} } };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+
+  // Case A: yorum satırı "error" kelimesi içeriyor
+  const tA = { callID: "fp1", tool: "bash", args: { command: "npm run build" } };
+  await plugin["tool.execute.before"](tA, { args: tA.args });
+  logs.length = 0;
+  const outA = { output: "// TODO: handle error case here\nlet x = 1\nbuild ok" };
+  await plugin["tool.execute.after"](tA, outA);
+  // Yorum false positive üretmemeli → success
+  assert.ok(!logs.some((l) => l.includes("onBuildFailure")), "yorum satırı false positive");
+  assert.equal(outA.metadata.build.status, "success");
+  console.log = origLog;
+});
+
+await okAsync("build-tracker: false positive guard (help text)", async () => {
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...a) => logs.push(a.join(" "));
+  const fakeClient = { app: { log: async () => {} } };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+
+  // Case B: help text "failed" kelimesi içeriyor
+  const tB = { callID: "fp2", tool: "bash", args: { command: "cargo build" } };
+  await plugin["tool.execute.before"](tB, { args: tB.args });
+  logs.length = 0;
+  const outB = { output: "Usage: cargo build [options]\n  --retry  Retry if previous run failed\nCompiled OK" };
+  await plugin["tool.execute.after"](tB, outB);
+  // Help text false positive üretmemeli → success
+  assert.ok(!logs.some((l) => l.includes("onBuildFailure")), "help text false positive");
+  assert.equal(outB.metadata.build.status, "success");
+  console.log = origLog;
+});
+
+await okAsync("build-tracker: real build error still detected", async () => {
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...a) => logs.push(a.join(" "));
+  const fakeClient = { app: { log: async () => {} } };
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {});
+
+  // Case C: gerçek rustc hatası (anchor-pattern ile yakalanmalı)
+  const tC = { callID: "real1", tool: "bash", args: { command: "cargo build" } };
+  await plugin["tool.execute.before"](tC, { args: tC.args });
+  logs.length = 0;
+  const errOut = "warning: unused variable\nerror[E0425]: cannot find value `x`\n  --> src/main.rs:5:9";
+  const outC = { output: errOut };
+  await plugin["tool.execute.after"](tC, outC);
+  // Gerçek hata yakalanmalı
+  assert.ok(logs.some((l) => l.includes("onBuildFailure")), "rustc error algılanmalı");
+  assert.equal(outC.metadata.build.status, "failed");
+  console.log = origLog;
+});
+
 console.log(`\n--- SONUÇ: ${pass} geçti, ${fail} kaldı ---`);
 process.exit(fail > 0 ? 1 : 0);

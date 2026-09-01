@@ -78,7 +78,22 @@ export const BuildHooksPlugin = async (input, options) => {
             pendingCalls.delete(t.callID);
             const duration = Date.now() - startTime;
             const outStr = output.output ?? "";
-            const hasError = /\berror\b|\bfailed\b/i.test(outStr);
+            // Build araçlarının bilinen hata formatları. Generic "error"/"failed"
+    // kelime araması yorum satırı, help text gibi durumlarda false positive
+    // üretiyor. Anchor'lar (^, satır başı) yorum/help'i filtreler, gerçek
+    // build hata çıktısını yakalar.
+    const BUILD_ERROR_PATTERNS = [
+        /^error\[/m,           // rustc: error[E0425]
+        /^npm ERR!/m,          // npm: npm ERR!
+        /^\s*error TS\d+/m,    // tsc: error TS2304
+        /^\s*→/m,              // biome, rust diagnostic
+        /^FAILED:/m,           // bazel, buck
+        /^FAIL\b/m,            // generic FAIL
+        /^make.*\*\*\* /m,     // make: *** Error
+        /^\s*error:/m,         // generic "error:" prefix (cargo, biome)
+        /^error\b/m,           // yarn berry, pnpm (satır başı "error")
+    ];
+    const hasError = BUILD_ERROR_PATTERNS.some((re) => re.test(outStr));
             const isBuildCall = sess.buildCallID === t.callID;
             // Surface'e (output.output) yazmıyoruz — context-saver kırpabilir,
             // sıra bağımlılığı ortadan kalkar. Bilgi metadata'da log-only durur.
