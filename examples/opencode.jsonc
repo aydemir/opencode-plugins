@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
-    "opencode-mem",
     "./plugins/opencode-context-saver.ts",
     "./plugins/opencode-build-tracker.ts"
   ],
