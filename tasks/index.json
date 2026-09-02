@@ -1,0 +1,71 @@
+[
+  {
+    "id": "TASK-101",
+    "title": "prune marker'ı bilgilendirici yap (LLM'e declare)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "lib-prune",
+      "llm-disclosure"
+    ],
+    "depends_on": [],
+    "created": "2026-09-02",
+    "updated": "2026-09-02",
+    "file": "tasks/done/TASK-101-prune-marker-bilgilendirme.md"
+  },
+  {
+    "id": "TASK-102",
+    "title": "no_prune escape mekanizması (toggle + inline marker + LLM declaration)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "escape-hatch",
+      "llm-disclosure"
+    ],
+    "depends_on": [
+      "TASK-101"
+    ],
+    "created": "2026-09-02",
+    "updated": "2026-09-02",
+    "file": "tasks/done/TASK-102-no-prune-escape-mekanizmasi.md"
+  },
+  {
+    "id": "TASK-103",
+    "title": "Test runner + CI (vitest/node:test, npm test, GitHub Actions)",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "testing",
+      "ci",
+      "quality"
+    ],
+    "depends_on": [],
+    "created": "2026-09-02",
+    "updated": "2026-09-02T18:30",
+    "file": "tasks/done/TASK-103-test-runner-ve-ci.md",
+    "resolved_at": "2026-09-02T18:30"
+  },
+  {
+    "id": "TASK-104",
+    "title": "Araç çağrısında per-call prune toggle (no_prune arg)",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "tool-call-toggle",
+      "lib-prune"
+    ],
+    "depends_on": [
+      "TASK-102"
+    ],
+    "created": "2026-09-02",
+    "updated": "2026-09-02",
+    "file": "tasks/done/TASK-104-per-tool-call-toggle.md"
+  }
+]

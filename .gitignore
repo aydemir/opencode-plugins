@@ -8,3 +8,6 @@ plugins/dist/
 plugins/lib/*.js
 plugins/lib/*.d.ts
 plugins/lib/*.map
+# codegraph SQLite index — her geliştirici kendi .codegraph/'ını
+# `codegraph init` (~2s) ile oluşturur; repoda tutulmaz.
+.codegraph/

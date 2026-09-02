@@ -1,0 +1,76 @@
+{
+  "name": "opencode-plugins",
+  "version": "0.1.0",
+  "description": "OpenCode için eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode) ve opencode-build-tracker.",
+  "type": "module",
+  "private": true,
+  "plugins": [
+    {
+      "id": "opencode-context-saver",
+      "file": "plugins/opencode-context-saver.ts",
+      "docs": "docs/opencode-context-saver.md",
+      "tests": "tests/context-saver.test.mjs",
+      "status": "stable"
+    },
+    {
+      "id": "opencode-build-tracker",
+      "file": "plugins/opencode-build-tracker.ts",
+      "docs": "docs/opencode-build-tracker.md",
+      "tests": "tests/build-tracker.test.mjs",
+      "status": "stable"
+    }
+  ],
+  "shared_lib": {
+    "path": "plugins/lib/prune.ts",
+    "exports": [
+      "PRUNE_MARKER",
+      "codePointLength",
+      "pruneMiddle",
+      "extractSummarySafe",
+      "resolvePruneBudget",
+      "isBuildCommand",
+      "extractErrors",
+      "formatPruneMarker",
+      "shouldSkipForArgs"
+    ]
+  },
+  "tests": {
+    "runner": "node:test (built-in, sıfır dependency)",
+    "layout": "tests/*.test.mjs",
+    "command": "npm test (pretest: npm run build)",
+    "ci": ".github/workflows/test.yml (Node 22, push + PR)"
+  },
+  "tasks_index": "tasks/index.json",
+  "docs_root": "docs/",
+  "project_map": "docs/PROJECT_MAP.md",
+  "examples": [
+    "examples/opencode.jsonc"
+  ],
+  "key_decisions": [
+    {
+      "id": "DECISION-001",
+      "date": "2026-09-02",
+      "summary": "LLM-özetli mod bilinçli olarak YAPILMADI. Hedef kitle free/küçük context'li (4K-32K) modeller. LLM özeti context'i şişirir + maliyet + key zorunluluğu. plugins/lib/prune.ts dosya başında gerekçe."
+    },
+    {
+      "id": "DECISION-002",
+      "date": "2026-09-02",
+      "summary": "Public API geriye uyumlu korunur. Yeni opsiyonlar (markerBuilder, enabled, skipWhenContains) default = eski davranış. AGENTS.md kural 2."
+    },
+    {
+      "id": "DECISION-003",
+      "date": "2026-09-02",
+      "summary": "Karakter sayımı (codePointLength), token sayımı değil. Hedef kitle hafif; tiktoken bağımlılığı eklenmez. İleride P3 gap olarak değerlendirilebilir."
+    },
+    {
+      "id": "DECISION-004",
+      "date": "2026-09-02",
+      "summary": "Test runner = node:test (built-in). vitest düşünüldü; sıfır dependency + küçük/free modeller hedef kitlesiyle uyumlu. pretest npm run build çağırır (testler dist/ output'unu import eder)."
+    },
+    {
+      "id": "DECISION-005",
+      "date": "2026-09-02",
+      "summary": "TASK-104 per-call prune bypass: t.args no_prune/noPrune/skipPrune + skipWhenContains substring. Plugin init enabled korunur, per-call bypass eklendi."
+    }
+  ]
+}

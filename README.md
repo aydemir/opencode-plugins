@@ -87,9 +87,27 @@ opencode-plugins/
 
 MIT — `LICENSE` dosyasına bak.
 
+## Geliştirme
+
+```bash
+npm ci               # bağımlılıkları kur
+npm run lint         # tsc --noEmit (tip kontrolü)
+npm test             # build + node:test (tests/*.test.mjs)
+```
+
+`npm test` arka arkaya `npm run build` ve `node --test tests/` çalıştırır.
+Testler `dist/` üretim çıktısını import eder — build güncel değilse testler
+yanlış negatif verebilir. CI gate: `.github/workflows/test.yml`.
+
+PR açmadan önce:
+
+1. `npm test` lokal yeşil olmalı
+2. `docs/` içindeki davranış sözleşmesi korunmalı (kırıcı API değişikliği yok)
+3. Yeni plugin davranışı için `tests/` altına `*.test.mjs` ekleyin
+
 ## Katkı
 
-PR'lar açıktır. Lütfen `docs/` içindeki davranış sözleşmesini bozmayın; her değişiklikte `npm run build` ve manuel smoke test yapın.
+PR'lar açıktır. Lütfen `docs/` içindeki davranış sözleşmesini bozmayın; her değişiklikte `npm test` çalıştırın.
 
 ## İlgili
 

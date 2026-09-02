@@ -3,9 +3,11 @@ import {
   codePointLength,
   extractErrors,
   extractSummarySafe,
+  formatPruneMarker,
   PRUNE_MARKER,
   pruneMiddle,
   resolvePruneBudget,
+  shouldSkipForArgs,
 } from "./lib/prune.js"
 
 interface ToolLogEntry {
@@ -27,6 +29,18 @@ interface CompactConfig {
   errorMaxLines: number
   errorTailLines: number
   injectAsSummary: boolean
+  /**
+   * Plugin seviyesinde global açma/kapama. `false` ise prune hiç uygulanmaz;
+   * debug iterasyonlarında veya "bu projede context-saver istemiyorum"
+   * durumlarında kullanılır. Default true.
+   */
+  enabled?: boolean
+  /**
+   * Per-call bypass substring. Tool args içinde veya output text içinde
+   * bu substring varsa prune atlanır. Default "#no-prune".
+   * LLM marker'ı da bu değeri kullanır.
+   */
+  skipWhenContains?: string
 }
 
 const DEFAULT_CONFIG: CompactConfig = {
@@ -39,15 +53,20 @@ const DEFAULT_CONFIG: CompactConfig = {
   errorMaxLines: 15,
   errorTailLines: 5,
   injectAsSummary: true,
+  enabled: true,
+  skipWhenContains: "#no-prune",
 }
 
 function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
   const cfg: CompactConfig = { ...DEFAULT_CONFIG, ...raw }
-  resolvePruneBudget({
-    compressThreshold: cfg.compressThreshold,
-    headChars: cfg.headChars,
-    tailChars: cfg.tailChars,
-  })
+  // enabled=false ise prune uygulanmayacağı için budget kontrolü gereksiz.
+  if (cfg.enabled !== false) {
+    resolvePruneBudget({
+      compressThreshold: cfg.compressThreshold,
+      headChars: cfg.headChars,
+      tailChars: cfg.tailChars,
+    })
+  }
   if (cfg.headChars < 0 || cfg.tailChars < 0) {
     throw new Error(`context-saver: headChars/tailChars must be >= 0`)
   }
@@ -94,6 +113,7 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       const startTime = startTimes.get(t.callID) ?? Date.now()
       const duration = Date.now() - startTime
       startTimes.delete(t.callID)
+      const perCallSkip = shouldSkipForArgs(t.args ?? {}, config.skipWhenContains ?? "#no-prune")
 
       const rawOutput: string =
         typeof output.output === "string"
@@ -121,14 +141,19 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       const entry: ToolLogEntry = {
         name: t.tool,
         args: t.args ?? {},
-        result: isError
-          ? errors.join("\n")
-          : codePointLength(rawOutput) > config.compressThreshold
-            ? pruneMiddle(rawOutput, {
-                headChars: config.headChars,
-                tailChars: config.tailChars,
-              })
-            : rawOutput,
+        result: perCallSkip
+          ? rawOutput
+          : isError
+            ? errors.join("\n")
+            : codePointLength(rawOutput) > config.compressThreshold
+              ? pruneMiddle(rawOutput, {
+                  headChars: config.headChars,
+                  tailChars: config.tailChars,
+                  markerBuilder: formatPruneMarker,
+                  enabled: config.enabled,
+                  skipWhenContains: config.skipWhenContains,
+                })
+              : rawOutput,
         duration,
         timestamp: Date.now(),
         error: isError,
@@ -136,7 +161,10 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
 
       addLog(entry)
 
-      if (isError) {
+      if (perCallSkip) {
+        // Per-call bypass: ham output, dokunma
+        output.output = rawOutput
+      } else if (isError) {
         output.output = `⚠️ ${summary}\n${errors.join("\n")}\n⏱️ ${duration}ms`
       } else if (codePointLength(rawOutput) > config.compressThreshold) {
         // Head+marker+tail. Marker'ın son halini pruneMiddle üretir; burada
@@ -144,6 +172,9 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
         const trimmed = pruneMiddle(rawOutput, {
           headChars: config.headChars,
           tailChars: config.tailChars,
+          markerBuilder: formatPruneMarker,
+          enabled: config.enabled,
+          skipWhenContains: config.skipWhenContains,
         })
         output.output = `[${summary}]\n${trimmed}\n⏱️ ${duration}ms`
       }

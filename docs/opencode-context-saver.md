@@ -60,6 +60,102 @@ event(session.completed) → console.log oturum özeti (opencode-context-saver.t
 
 Token tahmini (~4 char/token): 20k → 0.5k token.
 
+## Escape Mekanizması (`no_prune`)
+
+İçeriğin **kırpılmadan** döndürülmesini istediğiniz durumlarda üç giriş
+noktası var. Hepsi OpenCode oturumunu kapatmadan, plugin'i sökmenden
+çalışır.
+
+### 1. Plugin seviyesi global toggle
+
+`opencode.jsonc` içinde:
+
+```jsonc
+"pluginOptions": {
+  "opencode-context-saver": {
+    "enabled": false
+  }
+}
+```
+
+`enabled: false` → tüm prune atlanır, tool çıktıları ham döner.
+Default `true`. Tüm `CompactConfig` alanları için örnek:
+
+| Alan | Default | Açıklama |
+|------|---------|----------|
+| `enabled` | `true` | Tüm pruneları kapat/aç |
+| `skipWhenContains` | `"#no-prune"` | Per-call bypass substring (args/text) |
+| `headChars` | `100` | Baştan korunacak char |
+| `tailChars` | `50` | Sondan korunacak char |
+| `compressThreshold` | `500` | Eşiği aşmayan çıktıya dokunulmaz |
+| `injectAsSummary` | `true` | `chat.message`'a özet enjekte et |
+| `maxLogEntries` | `50` | Tutulan log entry üst sınırı |
+
+### 2. Inline escape marker (`#no-prune`)
+
+Tool çağrısının **gövdesine** `#no-prune` yaz → o çağrıya dokunulmaz:
+
+```ts
+// Örnek: shell komutunun başında sentinel
+shell("#no-prune\nnpm test 2>&1 | tail -200")
+
+// Örnek: read_file argümanında
+read_file(path: "logs/big.log", mode: "#no-prune read full file")
+```
+
+Mekanizma: `pruneMiddle()` `text.includes("#no-prune")` görürse erken
+return ile `text` aynen döner. Bu kontrol `prune.ts:90-95` civarında,
+her budama öncesi tetiklenir.
+
+### Per-Call Toggle (TASK-104)
+
+Araç çağrısında tek seferlik bypass:
+
+```json
+// bash tool örneği — prune atlanır, ham output döner
+{ "command": "cat large.log", "no_prune": true }
+{ "command": "echo hi #no-prune" }
+{ "command": "ls -R", "noPrune": true }
+```
+
+Desteklenen arg anahtarları: `no_prune` (bool/string "true"), `noPrune`, `skipPrune`, `"no-prune"` veya herhangi bir string arg içinde `skipWhenContains` (default `"#no-prune"`).
+
+Global `enabled: false` ise tüm çağrılar bypass; per-call ise sadece o çağrı.
+
+### 3. Tool şemasına `no_prune` parametresi (deneysel)
+
+OpenCode plugin API tool şemasını override etmeye izin veriyorsa
+LLM kendi isteğiyle `no_prune: true` gönderebilir. **Şu an uygulanmadı**
+— OpenCode SDK araştırılması gerekiyor. Marker'daki `Use no_prune=true
+for raw output ...` ipucu şimdilik LLM'e yöntem (1) ve (2)'yi hatırlatır.
+
+## Marker formatı (LLM disclosure)
+
+Kırpma gerçekleştiğinde marker dinamik olarak üretilir ve LLM'in
+bilgilendirilmesi amaçlanır:
+
+```
+[... pruned: 50000→300 chars (99.4% saved). Use no_prune=true for raw output ...]
+```
+
+İçeriği:
+
+- **original/kept** code-point sayısı (emoji yarılmaz, Unicode-safe).
+- **% saved** — bir ondalık basamak.
+- **escape hint** — ham çıktı için `no_prune=true` (TASK-102'de
+  implemente edilecek inline `#no-prune` marker ile birlikte).
+
+Bu sayede LLM:
+
+1. Çıktının kırpıldığını ve **ne kadar** kırpıldığını bilir.
+2. Tekrar `cat`/`read` çağırıp context'i şişirmeye gerek kalmaz; gerekiyorsa
+   `no_prune=true` ile hedefli şekilde ham çıktı ister.
+3. Marker'ı "hata" sanıp yanlış yorumlamaz.
+
+Küçük çıktılarda (head+tail altı) marker **eklenmez**; orijinal text
+aynen döner. `PRUNE_MARKER` sabiti geriye uyumluluk için korunur;
+yeni kod `formatPruneMarker(stats)` kullansın (`plugins/lib/prune.ts`).
+
 > Not: `read`/`bash` çıktıları plugin aktifken filtrelenmiş görünür. Ham sayılar `python3` ile diskten ve `codegraph_explore` (filtreyi bypass eder) ile teyit edildi. Rapor `/tmp/report.csv` üretildi.
 
 ## Kullanım

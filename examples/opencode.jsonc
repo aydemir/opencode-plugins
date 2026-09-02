@@ -4,6 +4,28 @@
     "./plugins/opencode-context-saver.ts",
     "./plugins/opencode-build-tracker.ts"
   ],
+  // opencode-context-saver opsiyonel ayarları:
+  //   enabled:        false   → tüm prune'ları devre dışı bırakır (debug).
+  //   headChars:      100     → her tool çıktısının başından korunacak char.
+  //   tailChars:      50      → sonundan korunacak char.
+  //   compressThreshold: 500  → bu eşiği aşmayan çıktıya dokunulmaz.
+  //   injectAsSummary: true   → tool log özetini chat.message'a enjekte et.
+  //   maxLogEntries:  50      → tutulan log entry üst sınırı.
+  //
+  // İnline bypass: tool çağrısının gövdesine "#no-prune" yaz → o çağrıya
+  // dokunulmaz. Marker'daki "Use no_prune=true for raw output ..." ipucu
+  // LLM'e bu yöntemi hatırlatır.
+  "pluginOptions": {
+    "opencode-context-saver": {
+      "enabled": true,
+      "skipWhenContains": "#no-prune",
+      "headChars": 100,
+      "tailChars": 50,
+      "compressThreshold": 500,
+      "injectAsSummary": true,
+      "maxLogEntries": 50
+    }
+  },
   "mcp": {
     "codegraph": {
       "type": "local",

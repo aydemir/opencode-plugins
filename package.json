@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "build:plugins": "for d in plugins/*; do echo \"build $d\"; done",
-    "test": "echo \"no tests yet\" && exit 0",
+    "pretest": "npm run build",
+    "test": "node --test --test-reporter=spec",
     "lint": "tsc --noEmit"
   },
   "keywords": [

@@ -3,7 +3,20 @@
  *
  * Tasarım: deepseek-harness `compaction-tool-result-pruner` paketinin
  * head+marker+tail desenini temel alır. Deterministik, idempotent,
- * LLM çağrısı yapmaz.
+ * LLM çağrısı YAPMAZ — bu bilinçli bir tercih:
+ *
+ *   - Hedef kitle OpenCode'u free / küçük context'li (4K–32K) modellerle
+ *     kullanıyor. Özet için ayrı bir LLM çağrısı, kırpmanın kazancını
+ *     yiyen ek context maliyeti yaratır.
+ *   - "Özetlenmiş model = kullanılan model" olduğunda küçük context'li
+ *     hedef model zaten özet kalitesini kaldırmaz; bilgi kaybı telafi
+ *     edilemez.
+ *   - Free / yerel kullanımda ek API call = ek fatura + latency + key
+ *     zorunluluğu; plugin'in sıfır maliyet avantajını bozar.
+ *
+ * Bu nedenle strateji: format-aware truncation + key-aware budama +
+ * hata satırı önceliklendirme. LLM özeti ancak OpenCode gerçek bir
+ * özet kancası sunarsa (örn. `experimental.hook.compacting`) eklenebilir.
  *
  * - `codePointLength`: Unicode code-point sayar (surrogate-safe, emoji yarılmaz).
  * - `pruneMiddle`: head+marker+tail ile ortayı budar; replacement < input garantisi.
@@ -17,6 +30,37 @@
 
 export const PRUNE_MARKER = "\n\n[... tool output middle pruned ...]\n\n"
 
+/**
+ * LLM'e declare eden bilgilendirici marker.
+ *
+ * `pruneMiddle()` `text.length` ve `result.length`'i code-point olarak
+ * biliyor; orijinal/kept oranını ve escape ipucunu marker'a gömerek
+ * LLM'in "bu çıktı kırpıldı, ham lazımsa `no_prune=true` kullan" demesini
+ * sağlıyoruz. Format determinizm → idempotent ikinci pass aynı sonucu verir.
+ */
+export interface PruneMarkerStats {
+  originalChars: number
+  keptChars: number
+  escapeHint?: string
+}
+
+export function formatPruneMarker(stats: PruneMarkerStats): string {
+  const { originalChars, keptChars, escapeHint } = stats
+  const saved = originalChars === 0
+    ? 0
+    : Math.round(((originalChars - keptChars) / originalChars) * 1000) / 10
+  const hint = escapeHint ?? "no_prune=true"
+  return (
+    `\n\n[... pruned: ${originalChars}→${keptChars} chars ` +
+    `(${saved}% saved). Use ${hint} for raw output ...]\n\n`
+  )
+}
+
+/**
+ * Eski (basit) marker — geriye uyumluluk için korunur.
+ * Yeni kod `formatPruneMarker` kullansın.
+ */
+
 /** Unicode code-point sayısı (UTF-16 code unit değil). */
 export function codePointLength(text: string): number {
   return Array.from(text).length
@@ -26,6 +70,50 @@ export interface PruneMiddleOptions {
   headChars?: number
   tailChars?: number
   marker?: string
+  /**
+   * Dinamik marker üretici. Verilirse `marker` (string) yok sayılır;
+   * budama gerçekleştiğinde `(stats: PruneMarkerStats) => string`
+   * çağrılarak marker oluşturulur. Verilmezse `marker` veya default
+   * `PRUNE_MARKER` kullanılır (geriye uyumlu).
+   */
+  markerBuilder?: (stats: PruneMarkerStats) => string
+  /**
+   * Pruning'i tamamen kapatır. `false` ise `text` aynen döner.
+   * Plugin options'tan okunan global `enabled` toggle burada uygulanır;
+   * kullanıcı debug iterasyonlarında tüm kırpmayı devre dışı bırakır.
+   */
+  enabled?: boolean
+  /**
+   * Bu substring'lerden biri `text` içinde geçerse prune atlanır.
+   * Default `#no-prune`. Kullanıcı tool çağrısının gövdesine
+   * `#no-prune` yazarak o çağrıya dokunulmamasını ister; LLM de
+   * marker'da gördüğü `no_prune=true` ipucuyla bu yöntemi tercih eder.
+   */
+  skipWhenContains?: string
+}
+
+
+/**
+ * Tool args içinde per-call bypass sinyali var mı?
+ * - boolean flag: no_prune / noPrune / skipPrune / "no-prune"
+ * - string değerlerde skipWhenContains substring
+ */
+export function shouldSkipForArgs(args: unknown, skipWhenContains = "#no-prune"): boolean {
+  if (!args || typeof args !== "object") return false
+  const obj = args as Record<string, unknown>
+  if (
+    obj.no_prune === true ||
+    obj.noPrune === true ||
+    obj.skipPrune === true ||
+    (obj as Record<string, unknown>)["no-prune"] === true
+  )
+    return true
+  if (typeof obj.no_prune === "string" && (obj.no_prune as string).toLowerCase() === "true") return true
+  if (typeof obj.noPrune === "string" && (obj.noPrune as string).toLowerCase() === "true") return true
+  for (const v of Object.values(obj)) {
+    if (typeof v === "string" && skipWhenContains && v.includes(skipWhenContains)) return true
+  }
+  return false
 }
 
 /**
@@ -37,22 +125,40 @@ export function pruneMiddle(
   text: string,
   options: PruneMiddleOptions = {},
 ): string {
+  // Kullanıcı veya plugin options pruneları kapatmışsa dokunma.
+  if (options.enabled === false) return text
+  // Inline escape marker — kullanıcı tool çağrısının içine yazdı.
+  const skip = options.skipWhenContains ?? "#no-prune"
+  if (skip && text.includes(skip)) return text
+
   const head = options.headChars ?? 100
   const tail = options.tailChars ?? 50
-  const marker = options.marker ?? PRUNE_MARKER
   const points = Array.from(text)
+  const originalChars = points.length
+
+  if (originalChars <= head + tail) return text
+
+  const builder = options.markerBuilder
+  const marker =
+    builder?.({
+      originalChars,
+      keptChars: head + tail,
+    }) ??
+    options.marker ??
+    PRUNE_MARKER
   const markerLen = codePointLength(marker)
   const budget = head + tail + markerLen
 
-  if (points.length <= budget) return text
   if (head < 0 || tail < 0 || markerLen < 0) {
-    throw new Error(`pruneMiddle: invalid budget (head=${head}, tail=${tail}, marker=${markerLen})`)
+    throw new Error(
+      `pruneMiddle: invalid budget (head=${head}, tail=${tail}, marker=${markerLen})`,
+    )
   }
 
   const result =
     points.slice(0, head).join("") +
     marker +
-    points.slice(points.length - tail).join("")
+    points.slice(originalChars - tail).join("")
   const resultLen = codePointLength(result)
 
   if (resultLen >= points.length || resultLen > budget) {
