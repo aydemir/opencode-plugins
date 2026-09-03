@@ -85,6 +85,8 @@ Default `true`. Tüm `CompactConfig` alanları için örnek:
 |------|---------|----------|
 | `enabled` | `true` | Tüm pruneları kapat/aç |
 | `skipWhenContains` | `"#no-prune"` | Per-call bypass substring (args/text) |
+| `skipTools` | `["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"]` | Kod okuma tool’larında prune uygulanmaz — LLM full output görür (case-sensitive) |
+| `skipTools` | `["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"]` | Kod okuma tool’larında prune uygulanmaz — LLM full output görür (case-sensitive) |
 | `headChars` | `100` | Baştan korunacak char |
 | `tailChars` | `50` | Sondan korunacak char |
 | `compressThreshold` | `500` | Eşiği aşmayan çıktıya dokunulmaz |
@@ -187,4 +189,14 @@ ToolCompactPlugin(input, { maxLogEntries: 30, compressThreshold: 800, injectAsSu
 node -e "const r=/\berror\b|\bfailed\b/i; console.log(r.test('FAILED'))"
 # plugin yükleme smoke (opencode içinde)
 # opencode --help ile plugin listesini kontrol et
+```
+
+Örnek `opencode.jsonc`:
+```jsonc
+{
+  "plugin": ["opencode-context-saver"],
+  "config": {
+    "skipTools": ["read", "read_file", "grep", "glob", "list_dir"]
+  }
+}
 ```

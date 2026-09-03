@@ -66,3 +66,28 @@ test("context-saver: chat.message emits summary toast with [bash( call summary",
   assert.ok(toastMsg.includes("Araç Özeti"))
   assert.ok(toastMsg.includes("bash("))
 })
+
+test("context-saver: skipTools — read tool long output not pruned", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "a".repeat(600)
+  const t = { callID: "10", tool: "read", args: {} }
+  await plugin["tool.execute.before"](t)
+  const output = { output: big }
+  await plugin["tool.execute.after"](t, output)
+  // read is in default skipTools, so no prune: raw output preserved, no marker
+  assert.equal(output.output, big)
+  assert.ok(!output.output.includes("pruned"))
+})
+
+test("context-saver: skipTools — bash long output is pruned", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "a".repeat(600)
+  const t = { callID: "11", tool: "bash", args: {} }
+  await plugin["tool.execute.before"](t)
+  const output = { output: big }
+  await plugin["tool.execute.after"](t, output)
+  // bash not in skipTools, so prune should apply
+  assert.ok(output.output.length < big.length)
+  assert.ok(output.output.includes("pruned"))
+})
+

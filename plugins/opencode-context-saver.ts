@@ -41,6 +41,12 @@ interface CompactConfig {
    * LLM marker'ı da bu değeri kullanır.
    */
   skipWhenContains?: string
+  /**
+   * Bu tool adlarında prune uygulanmaz — kod okuma araçları için
+   * LLM'in full output görmesi gerekir. Case-sensitive.
+   * Default: read/read_file/Read/grep/Grep/glob/Glob/list_dir/ListDir/search/Search
+   */
+  skipTools?: string[]
 }
 
 const DEFAULT_CONFIG: CompactConfig = {
@@ -55,6 +61,7 @@ const DEFAULT_CONFIG: CompactConfig = {
   injectAsSummary: true,
   enabled: true,
   skipWhenContains: "#no-prune",
+  skipTools: ["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"],
 }
 
 function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
@@ -136,7 +143,8 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
         maxSummaryChars: config.maxSummaryChars,
       })
 
-      const shouldPrune = !perCallSkip && !isError && codePointLength(rawOutput) > config.compressThreshold
+      const skipByTool = (config.skipTools ?? []).includes(t.tool)
+      const shouldPrune = !perCallSkip && !skipByTool && !isError && codePointLength(rawOutput) > config.compressThreshold
       const trimmed = shouldPrune
         ? pruneMiddle(rawOutput, {
             headChars: config.headChars,
