@@ -86,7 +86,6 @@ Default `true`. Tüm `CompactConfig` alanları için örnek:
 | `enabled` | `true` | Tüm pruneları kapat/aç |
 | `skipWhenContains` | `"#no-prune"` | Per-call bypass substring (args/text) |
 | `skipTools` | `["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"]` | Kod okuma tool’larında prune uygulanmaz — LLM full output görür (case-sensitive) |
-| `skipTools` | `["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"]` | Kod okuma tool’larında prune uygulanmaz — LLM full output görür (case-sensitive) |
 | `headChars` | `100` | Baştan korunacak char |
 | `tailChars` | `50` | Sondan korunacak char |
 | `compressThreshold` | `500` | Eşiği aşmayan çıktıya dokunulmaz |
