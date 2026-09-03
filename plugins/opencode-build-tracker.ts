@@ -18,6 +18,27 @@ const DEFAULT_CONFIG: BuildConfig = {
   thresholdMs: 120000,
 }
 
+const BUILD_ERROR_PATTERNS = [
+  /^error\[/m,           // rustc: error[E0425]
+  /^npm ERR!/m,          // npm: npm ERR!
+  /^\s*error TS\d+/m,    // tsc: error TS2304
+  /^\s*→/m,              // biome, rust diagnostic
+  /^FAILED:/m,           // bazel, buck
+  /^FAIL\b/m,            // generic FAIL
+  /^make.*\*\*\* /m,     // make: *** Error
+  /^\s*error:/m,         // generic "error:" prefix (cargo, biome)
+  /^error\b/m,           // yarn berry, pnpm (satır başı "error")
+] as const
+
+function getCommandFromArgs(args: unknown): string {
+  if (!args || typeof args !== "object") return ""
+  const a = args as Record<string, unknown>
+  if (typeof a.command === "string") return a.command
+  if (typeof a.cmd === "string") return a.cmd
+  if (typeof a.input === "string") return a.input
+  return ""
+}
+
 function createSession(): BuildSession {
   return { active: false, command: "", callIDs: [], startTime: 0, status: "idle", buildCallID: null }
 }
@@ -75,15 +96,6 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
     sess.buildCallID = null
   }
 
-  const getCommandFromArgs = (args: unknown): string => {
-    if (!args || typeof args !== "object") return ""
-    const a = args as Record<string, unknown>
-    if (typeof a.command === "string") return a.command
-    if (typeof a.cmd === "string") return a.cmd
-    if (typeof a.input === "string") return a.input
-    return ""
-  }
-
   return {
     async dispose() {
       pendingCalls.clear()
@@ -118,18 +130,6 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
       // kelime araması yorum satırı, help text gibi durumlarda false positive
       // üretiyor. Anchor'lar (^, satır başı) yorum/help'i filtreler, gerçek
       // build hata çıktısını yakalar.
-      const BUILD_ERROR_PATTERNS = [
-        /^error\[/m,           // rustc: error[E0425]
-        /^npm ERR!/m,          // npm: npm ERR!
-        /^\s*error TS\d+/m,    // tsc: error TS2304
-        /^\s*→/m,              // biome, rust diagnostic
-        /^FAILED:/m,           // bazel, buck
-        /^FAIL\b/m,            // generic FAIL
-        /^make.*\*\*\* /m,     // make: *** Error
-        /^\s*error:/m,         // generic "error:" prefix (cargo, biome)
-        /^error\b/m,           // yarn berry, pnpm (satır başı "error")
-      ] as const
-
       const hasError = BUILD_ERROR_PATTERNS.some((re) => re.test(outStr))
       const isBuildCall = sess.buildCallID === t.callID
 
@@ -144,22 +144,20 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
         return endSession("failed")
       }
 
-      if (isBuildCall) {
-        const dur = Date.now() - sess.startTime
+      const checkThreshold = (dur: number) => {
         if (dur >= config.thresholdMs) {
           console.log(
             `[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`,
           )
         }
+      }
+
+      if (isBuildCall) {
+        checkThreshold(Date.now() - sess.startTime)
         return endSession("success")
       }
 
-      const dur = Date.now() - sess.startTime
-      if (dur >= config.thresholdMs) {
-        console.log(
-          `[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`,
-        )
-      }
+      checkThreshold(Date.now() - sess.startTime)
     },
 
     // chat.message kancası: Build bilgisi endSession içinde hem

@@ -256,18 +256,19 @@ function splitShellSegments(command: string): string[] {
  * Phrase listesindeki iki-token kalıplar (`npm run`, `docker build`)
  * chained form için (`cd web && npm run build`) kritik — segment bazlı çalışır.
  */
+const BUILD_TOKENS = new Set<string>([
+  "build", "compile", "cargo", "npm", "pnpm", "yarn",
+  "bun", "make", "cmake", "gradle", "mvn", "go", "tsc",
+  "vite", "webpack", "esbuild", "rollup", "tailwind", "maven",
+  "docker", "pip", "pip3", "forge", "rgsx", "rain",
+])
+const BUILD_PHRASES = new Set<string>([
+  "npm run", "bun run", "yarn run", "pnpm run",
+  "next build", "docker build",
+  "pip install", "pip3 install",
+])
+
 export function isBuildCommand(command: string): boolean {
-  const BUILD_TOKENS = new Set<string>([
-    "build", "compile", "cargo", "npm", "pnpm", "yarn",
-    "bun", "make", "cmake", "gradle", "mvn", "go", "tsc",
-    "vite", "webpack", "esbuild", "rollup", "tailwind", "maven",
-    "docker", "pip", "pip3", "forge", "rgsx", "rain",
-  ])
-  const BUILD_PHRASES = new Set<string>([
-    "npm run", "bun run", "yarn run", "pnpm run",
-    "next build", "docker build",
-    "pip install", "pip3 install",
-  ])
 
   for (const seg of splitShellSegments(command)) {
     const lower = seg.toLowerCase()

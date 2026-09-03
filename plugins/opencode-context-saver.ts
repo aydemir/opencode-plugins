@@ -76,6 +76,16 @@ function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
   return cfg
 }
 
+function serializeOutput(value: unknown): string {
+  if (typeof value === "string") return value
+  if (value == null) return ""
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
 function formatCompactLog(entries: ToolLogEntry[]): string {
   const recent = entries.slice(-20)
   const lines = recent.map((e) => {
@@ -114,19 +124,7 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       const duration = Date.now() - startTime
       startTimes.delete(t.callID)
       const perCallSkip = shouldSkipForArgs(t.args ?? {}, config.skipWhenContains ?? "#no-prune")
-
-      const rawOutput: string =
-        typeof output.output === "string"
-          ? output.output
-          : output.output == null
-            ? ""
-            : (() => {
-                try {
-                  return JSON.stringify(output.output)
-                } catch {
-                  return String(output.output)
-                }
-              })()
+      const rawOutput = serializeOutput(output.output)
 
       const errors = extractErrors(rawOutput, {
         maxLines: config.errorMaxLines,
@@ -138,22 +136,30 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
         maxSummaryChars: config.maxSummaryChars,
       })
 
+      const shouldPrune = !perCallSkip && !isError && codePointLength(rawOutput) > config.compressThreshold
+      const trimmed = shouldPrune
+        ? pruneMiddle(rawOutput, {
+            headChars: config.headChars,
+            tailChars: config.tailChars,
+            markerBuilder: formatPruneMarker,
+            enabled: config.enabled,
+            skipWhenContains: config.skipWhenContains,
+          })
+        : rawOutput
+
+      let entryResult: string
+      if (perCallSkip) {
+        entryResult = rawOutput
+      } else if (isError) {
+        entryResult = errors.join("\n")
+      } else {
+        entryResult = trimmed
+      }
+
       const entry: ToolLogEntry = {
         name: t.tool,
         args: t.args ?? {},
-        result: perCallSkip
-          ? rawOutput
-          : isError
-            ? errors.join("\n")
-            : codePointLength(rawOutput) > config.compressThreshold
-              ? pruneMiddle(rawOutput, {
-                  headChars: config.headChars,
-                  tailChars: config.tailChars,
-                  markerBuilder: formatPruneMarker,
-                  enabled: config.enabled,
-                  skipWhenContains: config.skipWhenContains,
-                })
-              : rawOutput,
+        result: entryResult,
         duration,
         timestamp: Date.now(),
         error: isError,
@@ -162,20 +168,10 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       addLog(entry)
 
       if (perCallSkip) {
-        // Per-call bypass: ham output, dokunma
         output.output = rawOutput
       } else if (isError) {
         output.output = `⚠️ ${summary}\n${errors.join("\n")}\n⏱️ ${duration}ms`
-      } else if (codePointLength(rawOutput) > config.compressThreshold) {
-        // Head+marker+tail. Marker'ın son halini pruneMiddle üretir; burada
-        // tekrar PRUNE_MARKER kullanma — pruneMiddle zaten ekledi.
-        const trimmed = pruneMiddle(rawOutput, {
-          headChars: config.headChars,
-          tailChars: config.tailChars,
-          markerBuilder: formatPruneMarker,
-          enabled: config.enabled,
-          skipWhenContains: config.skipWhenContains,
-        })
+      } else if (shouldPrune) {
         output.output = `[${summary}]\n${trimmed}\n⏱️ ${duration}ms`
       }
       // else: küçük output'a dokunma, ham kalsın.
