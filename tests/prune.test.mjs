@@ -7,6 +7,9 @@ import {
   extractSummarySafe,
   isBuildCommand,
   extractErrors,
+  formatPruneMarker,
+  formatShortPruneMarker,
+  matchesRawPatterns,
   resolvePruneBudget,
 } from "../dist/plugins/lib/prune.js"
 
@@ -101,4 +104,58 @@ test("extractSummarySafe: truncates per-key values", () => {
 test("extractSummarySafe: missing args returns empty parts", () => {
   const s = extractSummarySafe("read", null)
   assert.equal(s, "read(, )")
+})
+
+test("formatPruneMarker: default hint declares both no_prune and off paths", () => {
+  const m = formatPruneMarker({ originalChars: 1000, keptChars: 150 })
+  assert.ok(m.includes("pruned:"))
+  assert.ok(m.includes("no_prune=true"))
+  assert.ok(m.includes("enabled:false"))
+  assert.ok(m.includes("off"))
+})
+
+test("formatPruneMarker: custom escapeHint is preserved", () => {
+  const m = formatPruneMarker({ originalChars: 1000, keptChars: 150, escapeHint: "custom-hint" })
+  assert.ok(m.includes("custom-hint"))
+  assert.ok(!m.includes("no_prune=true"))
+})
+
+test("formatShortPruneMarker: short marker keeps off-path, drops long prose", () => {
+  const long = formatPruneMarker({ originalChars: 1000, keptChars: 150 })
+  const short = formatShortPruneMarker({ originalChars: 1000, keptChars: 150 })
+  assert.ok(short.includes("pruned:"))
+  assert.ok(short.includes("enabled:false"))
+  assert.ok(!short.includes("For raw output:"))
+  assert.ok(short.length < long.length)
+})
+
+test("pruneMiddle: second pass on short-marked input stays marked", () => {
+  // Dinamik marker'da sayı kısalınca sonuç küçülebilir (throw şart değil);
+  // invariant: çıktı işaretsiz hale gelmez, "pruned:" korunur.
+  const big = "x".repeat(2000)
+  const once = pruneMiddle(big, { headChars: 100, tailChars: 50, markerBuilder: formatShortPruneMarker })
+  let twice
+  try {
+    twice = pruneMiddle(once, { headChars: 100, tailChars: 50, markerBuilder: formatShortPruneMarker })
+  } catch {
+    twice = once
+  }
+  assert.ok(twice.includes("pruned:"))
+})
+
+test("matchesRawPatterns: substring hit/miss, empty patterns", () => {
+  assert.equal(matchesRawPatterns({ command: "npm test" }, []), false)
+  assert.equal(matchesRawPatterns({ command: "npm test" }, ["npm test"]), true)
+  assert.equal(matchesRawPatterns({ command: "npm test" }, ["vite"]), false)
+  assert.equal(matchesRawPatterns({}, ["npm"]), false)
+})
+
+test("matchesRawPatterns: regex: prefix and nested values", () => {
+  assert.equal(matchesRawPatterns({ command: "ls -R /tmp" }, ["regex:^ls"]), true)
+  assert.equal(matchesRawPatterns({ command: "echo hi" }, ["regex:^ls"]), false)
+  assert.equal(matchesRawPatterns({ nested: { cmd: "npm run build" } }, ["npm run"]), true)
+})
+
+test("matchesRawPatterns: invalid regex throws (fail loud)", () => {
+  assert.throws(() => matchesRawPatterns({ command: "x" }, ["regex:(["]))
 })

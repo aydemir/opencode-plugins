@@ -57,7 +57,7 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
   const config: BuildConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
   const sess = createSession()
   const pendingCalls = new Map<string, number>()
-  const client = (input as unknown as { client?: { app?: { log?: (b: unknown) => Promise<void> | void }; tui?: { showToast?: (i: unknown) => Promise<void> | void } } }).client
+  const client = (input as unknown as { client?: { app?: { log?: (b: unknown) => Promise<void> | void } } }).client
 
   const endSession = (status: "success" | "failed") => {
     const duration = Date.now() - sess.startTime
@@ -77,17 +77,10 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
         },
       })
     }
-    // 2) TUI toast — kullanıcı anlık görür, scroll-back'te kalıcı değil
-    //    (output.metadata TUI'da render edilmediği için en iyi alternatif)
-    if (client?.tui?.showToast) {
-      const icon = status === "success" ? "✅" : "❌"
-      void client.tui.showToast({
-        body: {
-          message: `${icon} Build ${status}: ${command} (${dur})`,
-          variant: status === "failed" ? "error" : "info",
-        },
-      })
-    }
+    // 2) TUI toast KALDIRILDI (2026-09-04): toast metni istemcide sonraki
+    //    prompt'un parts dizisine id'siz text parçası olarak sızıp oturumu
+    //    kilitliyordu ("invalid user part before save" /
+    //    EventV2.InvalidDurableEvent). Bildirim yalnızca kalıcı app log'da.
     sess.active = false
     sess.command = ""
     sess.callIDs = []
@@ -160,10 +153,11 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
       checkThreshold(Date.now() - sess.startTime)
     },
 
-    // chat.message kancası: Build bilgisi endSession içinde hem
-// client.app.log (kalıcı) hem client.tui.showToast (TUI anlık)
-// olarak bildiriliyor. output.metadata TUI'da render edilmediği
-// için terk edildi (ağaç araştırması 2026-09-01).
+    // chat.message kancası: Build bilgisi endSession içinde yalnızca
+// client.app.log (kalıcı) ile bildiriliyor. showToast 2026-09-04'te
+// kaldırıldı (toast metni sonraki prompt'a sızıp oturumu kilitliyordu).
+// output.metadata TUI'da render edilmediği için terk edildi
+// (ağaç araştırması 2026-09-01).
 
     event: async ({ event }) => {
       const e = event as Record<string, unknown>

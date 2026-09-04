@@ -11,10 +11,13 @@
   //   compressThreshold: 500  → bu eşiği aşmayan çıktıya dokunulmaz.
   //   injectAsSummary: true   → tool log özetini chat.message'a enjekte et.
   //   maxLogEntries:  50      → tutulan log entry üst sınırı.
+  //   discloseOnce:   true    → oturum başında LLM'e bir kezlik kaçış notu.
+  //   alwaysRawCommands: []   → args'ta geçerse ham bırak (substring; "regex:" önekli desen).
+  //   disableForCalls: 0      → oturum başına ilk N çağrıyı ham bırak (geçici kapatma).
   //
   // İnline bypass: tool çağrısının gövdesine "#no-prune" yaz → o çağrıya
-  // dokunulmaz. Marker'daki "Use no_prune=true for raw output ..." ipucu
-  // LLM'e bu yöntemi hatırlatır.
+  // dokunulmaz. Marker'daki "For raw output: no_prune=true (this call)
+  // or enabled:false (off)" ipucu LLM'e bu yöntemi hatırlatır.
   "pluginOptions": {
     "opencode-context-saver": {
       "enabled": true,
@@ -23,7 +26,10 @@
       "tailChars": 50,
       "compressThreshold": 500,
       "injectAsSummary": true,
-      "maxLogEntries": 50
+      "maxLogEntries": 50,
+      "discloseOnce": true,
+      "alwaysRawCommands": [],
+      "disableForCalls": 0
     }
   },
   "mcp": {

@@ -114,10 +114,11 @@ test("build-tracker: real rustc error (anchor pattern) IS detected as failure", 
   }
 })
 
-test("build-tracker: TUI toast on success carries info variant + command name", async () => {
+test("build-tracker: no toast on success, status goes to app.log (toast text leaks into next prompt)", async () => {
   const toasts = []
+  const logs = []
   const fakeClient = {
-    app: { log: async () => {} },
+    app: { log: async (m) => { logs.push(m) } },
     tui: { showToast: async (m) => { toasts.push(m) } },
   }
   const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
@@ -125,16 +126,17 @@ test("build-tracker: TUI toast on success carries info variant + command name", 
   await plugin["tool.execute.before"](t, { args: t.args })
   const out = { output: "build succeeded" }
   await plugin["tool.execute.after"](t, out)
-  assert.equal(toasts.length, 1)
-  assert.ok(toasts[0].body.message.includes("Build success"))
-  assert.ok(toasts[0].body.message.includes("npm run build"))
-  assert.equal(toasts[0].body.variant, "info")
+  assert.equal(toasts.length, 0)
+  assert.ok(logs.some((l) => l.body.message.includes("Build success")))
+  assert.ok(logs.some((l) => l.body.message.includes("npm run build")))
+  assert.ok(logs.some((l) => l.body.level === "info"))
 })
 
-test("build-tracker: TUI toast on failure uses error variant", async () => {
+test("build-tracker: no toast on failure, error goes to app.log", async () => {
   const toasts = []
+  const logs = []
   const fakeClient = {
-    app: { log: async () => {} },
+    app: { log: async (m) => { logs.push(m) } },
     tui: { showToast: async (m) => { toasts.push(m) } },
   }
   const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
@@ -142,9 +144,9 @@ test("build-tracker: TUI toast on failure uses error variant", async () => {
   await plugin["tool.execute.before"](t, { args: t.args })
   const out = { output: "error[E0425]: cannot find value `x`" }
   await plugin["tool.execute.after"](t, out)
-  assert.equal(toasts.length, 1)
-  assert.ok(toasts[0].body.message.includes("Build failed"))
-  assert.equal(toasts[0].body.variant, "error")
+  assert.equal(toasts.length, 0)
+  assert.ok(logs.some((l) => l.body.message.includes("Build failed")))
+  assert.ok(logs.some((l) => l.body.level === "error"))
 })
 
 test("build-tracker: graceful when tui API is missing", async () => {

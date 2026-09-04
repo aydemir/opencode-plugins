@@ -35,7 +35,8 @@ export const PRUNE_MARKER = "\n\n[... tool output middle pruned ...]\n\n"
  *
  * `pruneMiddle()` `text.length` ve `result.length`'i code-point olarak
  * biliyor; orijinal/kept oranını ve escape ipucunu marker'a gömerek
- * LLM'in "bu çıktı kırpıldı, ham lazımsa `no_prune=true` kullan" demesini
+ * LLM'in "bu çıktı kırpıldı, ham lazımsa `no_prune=true` kullan ya da
+ * eklentiyi `enabled:false` (off) ile kapat" demesini
  * sağlıyoruz. Format determinizm → idempotent ikinci pass aynı sonucu verir.
  */
 export interface PruneMarkerStats {
@@ -49,10 +50,24 @@ export function formatPruneMarker(stats: PruneMarkerStats): string {
   const saved = originalChars === 0
     ? 0
     : Math.round(((originalChars - keptChars) / originalChars) * 1000) / 10
-  const hint = escapeHint ?? "no_prune=true"
+  const hint = escapeHint ?? "no_prune=true (this call) or enabled:false (off)"
   return (
     `\n\n[... pruned: ${originalChars}→${keptChars} chars ` +
-    `(${saved}% saved). Use ${hint} for raw output ...]\n\n`
+    `(${saved}% saved). For raw output: ${hint}. ...]\n\n`
+  )
+}
+
+/**
+ * Kısa marker: oturumdaki ilk kırpmadan sonrakiler için. Tam mekanizma
+ * ilk (uzun) marker'da verildi; tekrar token harcamamak için sadece
+ * oran ve kaçış anahtarları kalır. `enabled:false (off)` bilgisi
+ * korunur — LLM ham çıktının iki yolunu da kısa marker'dan okur.
+ */
+export function formatShortPruneMarker(stats: PruneMarkerStats): string {
+  const { originalChars, keptChars } = stats
+  return (
+    `\n\n[... pruned: ${originalChars}→${keptChars} chars. ` +
+    `Raw: no_prune=true / enabled:false (off) ...]\n\n`
   )
 }
 
@@ -114,6 +129,34 @@ export function shouldSkipForArgs(args: unknown, skipWhenContains = "#no-prune")
     if (typeof v === "string" && skipWhenContains && v.includes(skipWhenContains)) return true
   }
   return false
+}
+
+/**
+ * Always-raw komut eşleşmesi: `args` içindeki string değerlerde desen ara.
+ * - Düz desen: substring eşleşmesi.
+ * - `regex:` önekli desen: RegExp testi (geçersiz desen throw — fail loud;
+ *   config yüklenirken `resolveConfig` önden doğrular).
+ */
+export function matchesRawPatterns(args: unknown, patterns: readonly string[]): boolean {
+  if (patterns.length === 0) return false
+  const texts = collectStrings(args)
+  if (texts.length === 0) return false
+  return patterns.some((p) => {
+    if (p.startsWith("regex:")) {
+      const re = new RegExp(p.slice("regex:".length))
+      return texts.some((t) => re.test(t))
+    }
+    return texts.some((t) => t.includes(p))
+  })
+}
+
+function collectStrings(value: unknown, depth = 0, seen = new Set<unknown>()): string[] {
+  if (typeof value === "string") return [value]
+  if (value === null || typeof value !== "object" || depth > 5 || seen.has(value)) return []
+  seen.add(value)
+  const out: string[] = []
+  for (const v of Object.values(value)) out.push(...collectStrings(v, depth + 1, seen))
+  return out
 }
 
 /**

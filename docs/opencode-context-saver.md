@@ -91,6 +91,9 @@ Default `true`. Tüm `CompactConfig` alanları için örnek:
 | `compressThreshold` | `500` | Eşiği aşmayan çıktıya dokunulmaz |
 | `injectAsSummary` | `true` | `chat.message`'a özet enjekte et |
 | `maxLogEntries` | `50` | Tutulan log entry üst sınırı |
+| `discloseOnce` | `true` | Oturum başında bir kezlik kaçış notu (`system.transform`) |
+| `alwaysRawCommands` | `[]` | Args'ta geçerse ham bırak (substring / `regex:`) |
+| `disableForCalls` | `0` | Oturum başına ilk N çağrıyı ham bırak |
 
 ### 2. Inline escape marker (`#no-prune`)
 
@@ -123,12 +126,46 @@ Desteklenen arg anahtarları: `no_prune` (bool/string "true"), `noPrune`, `skipP
 
 Global `enabled: false` ise tüm çağrılar bypass; per-call ise sadece o çağrı.
 
+### Geçici kapatma + whitelist (TASK-106)
+
+Tek çağrılık flag ile global kapatma arası:
+
+- **Whitelist (komut):** `alwaysRawCommands: ["npm test", "regex:^git log"]`
+  — tool args'ındaki string değerlerde substring (veya `regex:` önekli
+  desen) eşleşirse o çağrı ham kalır. Tool adları için ayrı liste
+  yoktur; mevcut `skipTools` kullanılır.
+- **Geçici kapatma (sayaç):** `disableForCalls: 3` — oturum başına ilk
+  3 prune-eligible çağrı ham kalır, sayaç bitince prune otomatik döner.
+  Per-call `disableForCalls: N` arg'ı sayacı doldurur (oturum başına).
+  Her bypass bir harcar; küçük çıktılar da harcar (öngörülebilirlik).
+- **Hata kuralı:** geçersiz `regex:` ve negatif sayaç config
+  yüklenirken throw eder (fail loud).
+
 ### 3. Tool şemasına `no_prune` parametresi (deneysel)
 
 OpenCode plugin API tool şemasını override etmeye izin veriyorsa
 LLM kendi isteğiyle `no_prune: true` gönderebilir. **Şu an uygulanmadı**
-— OpenCode SDK araştırılması gerekiyor. Marker'daki `Use no_prune=true
-for raw output ...` ipucu şimdilik LLM'e yöntem (1) ve (2)'yi hatırlatır.
+— OpenCode SDK araştırılması gerekiyor. Marker'daki `For raw output:
+no_prune=true (this call) or enabled:false (off)` ipucu LLM'e yöntem
+(1) ve (2)'yi hatırlatır.
+
+## Ajanlar için (keşif)
+
+> Bu eklenti büyük tool çıktılarını ortasından kırpar. Ham çıktı için:
+> tek çağrıda `no_prune=true` (veya `#no-prune` göm), eşleşen komutta
+> `alwaysRawCommands`, sayaçla `disableForCalls`, global `enabled:false`
+> (off). Tool adları için `skipTools` listesi kullanılır.
+
+Keşif üç kanallıdır; kırpma yaşanmasa da mekanizma bilinir:
+
+1. **Oturum başı notu** — `experimental.chat.system.transform` ile bir
+   kez enjekte edilir (`discloseOnce`, default `true`). Kapatmak için
+   config'de `discloseOnce: false`.
+2. **Kırpma marker'ı** — ilk kırpmada uzun (tam mekanizma), sonrakilerde
+   kısa marker. İkisi de `no_prune=true` ve `enabled:false (off)` yolunu
+   yazar.
+3. **Bu doküman** — otoriter kaynak `plugins/` altındaki kaynaktır,
+   `dist/` build çıktısıdır.
 
 ## Marker formatı (LLM disclosure)
 
@@ -136,15 +173,18 @@ Kırpma gerçekleştiğinde marker dinamik olarak üretilir ve LLM'in
 bilgilendirilmesi amaçlanır:
 
 ```
-[... pruned: 50000→300 chars (99.4% saved). Use no_prune=true for raw output ...]
+[... pruned: 50000→300 chars (99.4% saved). For raw output: no_prune=true (this call) or enabled:false (off). ...]
 ```
 
 İçeriği:
 
 - **original/kept** code-point sayısı (emoji yarılmaz, Unicode-safe).
 - **% saved** — bir ondalık basamak.
-- **escape hint** — ham çıktı için `no_prune=true` (TASK-102'de
-  implemente edilecek inline `#no-prune` marker ile birlikte).
+- **escape hint** — ham çıktı için `no_prune=true` (tek çağrı) veya
+  `enabled:false` (off, global kapatma). Kısa marker'da da korunur:
+  `Raw: no_prune=true / enabled:false (off)`.
+- **iki seviye** — oturumdaki ilk kırpmada uzun marker (tam mekanizma),
+  sonrakilerde kısa marker (token ekonomisi).
 
 Bu sayede LLM:
 

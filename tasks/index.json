@@ -67,5 +67,63 @@
     "created": "2026-09-02",
     "updated": "2026-09-02",
     "file": "tasks/done/TASK-104-per-tool-call-toggle.md"
+  },
+  {
+    "id": "TASK-105",
+    "title": "Prune marker tam cikti off bildirimi",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "lib-prune",
+      "llm-disclosure"
+    ],
+    "depends_on": [
+      "TASK-101",
+      "TASK-102"
+    ],
+    "created": "2026-09-04",
+    "updated": "2026-09-04",
+    "file": "tasks/done/TASK-105-marker-off-bildirimi.md"
+  },
+  {
+    "id": "TASK-106",
+    "title": "Gecici kapatma + always-raw whitelist",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "lib-prune",
+      "escape-hatch"
+    ],
+    "depends_on": [
+      "TASK-102",
+      "TASK-104"
+    ],
+    "created": "2026-09-04",
+    "updated": "2026-09-04",
+    "file": "tasks/done/TASK-106-gecici-kapatma-whitelist.md"
+  },
+  {
+    "id": "TASK-107",
+    "title": "Eklenti kesfi LLM disclosure",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "llm-disclosure",
+      "dx"
+    ],
+    "depends_on": [
+      "TASK-101",
+      "TASK-102",
+      "TASK-105"
+    ],
+    "created": "2026-09-04",
+    "updated": "2026-09-04",
+    "file": "tasks/done/TASK-107-eklenti-kesfi-llm-disclosure.md"
   }
 ]

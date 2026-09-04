@@ -52,19 +52,22 @@ test("context-saver: non-string output goes through JSON.stringify", async () =>
   assert.ok(output.output !== null)
 })
 
-test("context-saver: chat.message emits summary toast with [bash( call summary", async () => {
-  let toastMsg = ""
+test("context-saver: chat.message logs summary via app.log, never via toast (toast text leaks into next prompt)", async () => {
+  let toastCalls = 0
+  let logged = null
   const client = {
-    tui: { showToast: async ({ body }) => { toastMsg = body.message } },
-    app: { log: async () => {} },
+    tui: { showToast: async () => { toastCalls++ } },
+    app: { log: async (entry) => { logged = entry } },
   }
   const plugin = await ToolCompactPlugin({ client }, {})
   const t = { callID: "5", tool: "bash", args: { command: "echo hi" } }
   await plugin["tool.execute.before"](t)
   await plugin["tool.execute.after"](t, { output: "hi" })
   await plugin["chat.message"]({}, {})
-  assert.ok(toastMsg.includes("Araç Özeti"))
-  assert.ok(toastMsg.includes("bash("))
+  assert.equal(toastCalls, 0)
+  assert.ok(logged.body.message.includes("Araç Özeti"))
+  assert.ok(logged.body.message.includes("bash("))
+  assert.equal(logged.body.service, "context-saver")
 })
 
 test("context-saver: skipTools — read tool long output not pruned", async () => {
@@ -89,5 +92,111 @@ test("context-saver: skipTools — bash long output is pruned", async () => {
   // bash not in skipTools, so prune should apply
   assert.ok(output.output.length < big.length)
   assert.ok(output.output.includes("pruned"))
+})
+
+test("context-saver: first prune in session uses long marker, second uses short", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "y".repeat(5000)
+  const t1 = { callID: "20", sessionID: "sess-1", tool: "bash", args: { command: "echo big" } }
+  await plugin["tool.execute.before"](t1)
+  const out1 = { output: big }
+  await plugin["tool.execute.after"](t1, out1)
+  assert.ok(out1.output.includes("For raw output:"))
+  assert.ok(out1.output.includes("enabled:false"))
+  const t2 = { callID: "21", sessionID: "sess-1", tool: "bash", args: { command: "echo big2" } }
+  await plugin["tool.execute.before"](t2)
+  const out2 = { output: big }
+  await plugin["tool.execute.after"](t2, out2)
+  assert.ok(out2.output.includes("pruned:"))
+  assert.ok(!out2.output.includes("For raw output:"))
+})
+
+test("context-saver: new session gets long marker again", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "y".repeat(5000)
+  for (const sid of ["sess-a", "sess-b"]) {
+    const t = { callID: sid, sessionID: sid, tool: "bash", args: { command: "echo big" } }
+    await plugin["tool.execute.before"](t)
+    const out = { output: big }
+    await plugin["tool.execute.after"](t, out)
+    assert.ok(out.output.includes("For raw output:"), sid)
+  }
+})
+
+test("context-saver: system.transform injects disclosure once", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const output = { system: ["base prompt"] }
+  await plugin["experimental.chat.system.transform"]({}, output)
+  await plugin["experimental.chat.system.transform"]({}, output)
+  assert.equal(output.system.length, 2)
+  assert.ok(output.system[1].includes("[context-saver]"))
+  assert.ok(output.system[1].includes("no_prune=true"))
+  assert.ok(output.system[1].includes("enabled:false"))
+})
+
+test("context-saver: system.transform skips when disclosure already present", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const output = { system: ["[context-saver] already disclosed"] }
+  await plugin["experimental.chat.system.transform"]({}, output)
+  assert.equal(output.system.length, 1)
+})
+
+test("context-saver: discloseOnce:false disables system injection", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, { discloseOnce: false })
+  const output = { system: [] }
+  await plugin["experimental.chat.system.transform"]({}, output)
+  assert.equal(output.system.length, 0)
+})
+
+test("context-saver: alwaysRawCommands bypasses prune on match", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, { alwaysRawCommands: ["npm test"] })
+  const big = "z".repeat(5000)
+  const t1 = { callID: "30", sessionID: "w-1", tool: "bash", args: { command: "npm test 2>&1" } }
+  await plugin["tool.execute.before"](t1)
+  const out1 = { output: big }
+  await plugin["tool.execute.after"](t1, out1)
+  assert.equal(out1.output, big)
+  const t2 = { callID: "31", sessionID: "w-1", tool: "bash", args: { command: "echo other" } }
+  await plugin["tool.execute.before"](t2)
+  const out2 = { output: big }
+  await plugin["tool.execute.after"](t2, out2)
+  assert.ok(out2.output.includes("pruned:"))
+})
+
+test("context-saver: disableForCalls gives N raw calls then resumes prune", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, { disableForCalls: 2 })
+  const big = "z".repeat(5000)
+  const cases = [["40", true], ["41", true], ["42", false]]
+  for (const [id, raw] of cases) {
+    const t = { callID: id, sessionID: "c-1", tool: "bash", args: { command: "echo x" } }
+    await plugin["tool.execute.before"](t)
+    const out = { output: big }
+    await plugin["tool.execute.after"](t, out)
+    if (raw) assert.equal(out.output, big, id)
+    else assert.ok(out.output.includes("pruned:"), id)
+  }
+})
+
+test("context-saver: per-call disableForCalls refills counter", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "z".repeat(5000)
+  const t1 = { callID: "50", sessionID: "r-1", tool: "bash", args: { command: "echo x", disableForCalls: 1 } }
+  await plugin["tool.execute.before"](t1)
+  const out1 = { output: big }
+  await plugin["tool.execute.after"](t1, out1)
+  assert.equal(out1.output, big)
+  const t2 = { callID: "51", sessionID: "r-1", tool: "bash", args: { command: "echo x" } }
+  await plugin["tool.execute.before"](t2)
+  const out2 = { output: big }
+  await plugin["tool.execute.after"](t2, out2)
+  assert.ok(out2.output.includes("pruned:"))
+})
+
+test("context-saver: invalid alwaysRawCommands regex rejects at init", async () => {
+  await assert.rejects(ToolCompactPlugin({ client: fakeClient() }, { alwaysRawCommands: ["regex:(["] }))
+})
+
+test("context-saver: negative disableForCalls rejects at init", async () => {
+  await assert.rejects(ToolCompactPlugin({ client: fakeClient() }, { disableForCalls: -1 }))
 })
 
