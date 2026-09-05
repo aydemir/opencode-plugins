@@ -3,6 +3,13 @@ import { isBuildCommand } from "./lib/prune.js"
 
 interface BuildConfig {
   thresholdMs: number
+  /**
+   * Sessiz mod (default false = sessiz). `true` ise `[Build Hook] ...`
+   * satırları stdout'a yazılır; Termux/OpenTUI'da bu satırlar input'ta
+   * hayalet yazı (ghost text) bırakıyordu. Kalıcı bildirim zaten
+   * `client.app.log` ile veriliyor, stdout log'u gereksiz.
+   */
+  verbose?: boolean
 }
 
 interface BuildSession {
@@ -16,6 +23,7 @@ interface BuildSession {
 
 const DEFAULT_CONFIG: BuildConfig = {
   thresholdMs: 120000,
+  verbose: false,
 }
 
 const BUILD_ERROR_PATTERNS = [
@@ -63,9 +71,13 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
     const duration = Date.now() - sess.startTime
     const command = sess.command
     const dur = formatDuration(duration)
-    console.log(
-      `[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${dur}`,
-    )
+    // stdout'a yazma: Termux/OpenTUI'da hayalet yazı bırakıyor.
+    // Sadece verbose:true ise yaz (debug). Kalıcı log altta app.log'da.
+    if (config.verbose) {
+      console.log(
+        `[Build Hook] ${status === "success" ? "✅ onBuildSuccess" : "❌ onBuildFailure"}: ${command} — ${dur}`,
+      )
+    }
     // 1) Kalıcı log (debug/replay)
     if (client?.app?.log) {
       void client.app.log({
@@ -104,7 +116,7 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
         sess.startTime = Date.now()
         sess.status = "running"
         sess.buildCallID = t.callID
-        console.log(`[Build Hook] 🔨 onBuildStart: ${cmd}`)
+        if (config.verbose) console.log(`[Build Hook] 🔨 onBuildStart: ${cmd}`)
       }
       if (sess.active) {
         pendingCalls.set(t.callID, Date.now())
@@ -131,17 +143,21 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
 
 
       if (hasError) {
-        console.log(
-          `[Build Hook] ❌ onBuildFailure: ${t.tool} — errors detected in ${formatDuration(duration)}`,
-        )
+        if (config.verbose) {
+          console.log(
+            `[Build Hook] ❌ onBuildFailure: ${t.tool} — errors detected in ${formatDuration(duration)}`,
+          )
+        }
         return endSession("failed")
       }
 
       const checkThreshold = (dur: number) => {
         if (dur >= config.thresholdMs) {
-          console.log(
-            `[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`,
-          )
+          if (config.verbose) {
+            console.log(
+              `[Build Hook] ⏱️  onThresholdExceeded: ${formatDuration(dur)} (threshold: ${formatDuration(config.thresholdMs)})`,
+            )
+          }
         }
       }
 
@@ -156,6 +172,8 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
     // chat.message kancası: Build bilgisi endSession içinde yalnızca
 // client.app.log (kalıcı) ile bildiriliyor. showToast 2026-09-04'te
 // kaldırıldı (toast metni sonraki prompt'a sızıp oturumu kilitliyordu).
+// 2026-09-04: console.log stdout da sessize alındı (verbose:false default);
+// Termux/OpenTUI'da "[Build Hook]" satırları input'ta hayalet yazı bırakıyordu.
 // output.metadata TUI'da render edilmediği için terk edildi
 // (ağaç araştırması 2026-09-01).
 
@@ -171,7 +189,7 @@ export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, u
             sess.command = cmd
             sess.startTime = Date.now()
             sess.status = "running"
-            console.log(`[Build Hook] 🔨 onBuildStart (event): ${cmd}`)
+            if (config.verbose) console.log(`[Build Hook] 🔨 onBuildStart (event): ${cmd}`)
           }
         }
         return

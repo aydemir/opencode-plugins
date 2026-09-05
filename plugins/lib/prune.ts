@@ -59,15 +59,40 @@ export function formatPruneMarker(stats: PruneMarkerStats): string {
 
 /**
  * Kısa marker: oturumdaki ilk kırpmadan sonrakiler için. Tam mekanizma
- * ilk (uzun) marker'da verildi; tekrar token harcamamak için sadece
- * oran ve kaçış anahtarları kalır. `enabled:false (off)` bilgisi
- * korunur — LLM ham çıktının iki yolunu da kısa marker'dan okur.
+ * bilgisi tekrar tekrar yazılmaz; sadece karakter sayıları, kırpma
+ * oranı ve **tüm 5 kaçış yolu** kalır.
+ *
+ * `opts.skipWhenContains` verilirse marker o değerle yazılır (config
+ * `skipWhenContains` ile senkron). `opts.disableForCalls > 0` ve
+ * `opts.alwaysRawCommands.length > 0` ise ilgili yollar da görünür.
+ *
+ * Marker LLM'in tek gördüğü bilgi kaynağıdır (system prompt
+ * disclosure'ına güvenmek riskli — `experimental.chat.system.transform`
+ * hook sözleşmesi OpenCode runtime'ında kesin değil). Bu yüzden 5 yol
+ * burada deterministik olarak listelenir; format önceki haliyle
+ * uyumsuzdur ama geriye uyumluluk gerektirmez (marker LLM'e bilgi
+ * taşır, makine parse'ına konu olmaz).
  */
-export function formatShortPruneMarker(stats: PruneMarkerStats): string {
+export function formatShortPruneMarker(
+  stats: PruneMarkerStats,
+  opts: {
+    skipWhenContains?: string
+    disableForCalls?: number
+    alwaysRawCommands?: readonly string[]
+  } = {},
+): string {
   const { originalChars, keptChars } = stats
+  const skip = opts.skipWhenContains ?? "#no-prune"
+  const ways: string[] = [
+    "no_prune/noPrune/skipPrune (per-call flag)",
+    `embed "${skip}" in args`,
+    "disableForCalls=N (next N raw)",
+    "alwaysRawCommands (config whitelist)",
+    "enabled:false (off)",
+  ]
   return (
     `\n\n[... pruned: ${originalChars}→${keptChars} chars. ` +
-    `Raw: no_prune=true / enabled:false (off) ...]\n\n`
+    `Raw ways: ${ways.join(" | ")} ...]\n\n`
   )
 }
 

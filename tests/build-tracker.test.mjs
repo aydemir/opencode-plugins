@@ -16,7 +16,7 @@ test("build-tracker: detects build command on tool.execute.before", async () => 
   const cap = captureConsole()
   try {
     const fakeClient = { app: { log: async () => {} } }
-    const plugin = await BuildHooksPlugin({ client: fakeClient }, { thresholdMs: 120000 })
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, { thresholdMs: 120000, verbose: true })
     const t = { callID: "b1", tool: "bash", args: { command: "npm run build" } }
     await plugin["tool.execute.before"](t, { args: t.args })
     await plugin["tool.execute.after"](t, { output: "build succeeded" })
@@ -46,7 +46,7 @@ test("build-tracker: chained command (cd && npm run build) is detected", async (
   const cap = captureConsole()
   try {
     const fakeClient = { app: { log: async () => {} } }
-    const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, { verbose: true })
     const t = { callID: "b3", tool: "bash", args: { command: "cd web && npm run build" } }
     await plugin["tool.execute.before"](t, { args: t.args })
     assert.ok(cap.logs.some((l) => l.includes("onBuildStart")))
@@ -59,7 +59,7 @@ test("build-tracker: event command.executed starts a build session", async () =>
   const cap = captureConsole()
   try {
     const fakeClient = { app: { log: async () => {} } }
-    const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, { verbose: true })
     await plugin["event"]({ event: { type: "command.executed", command: "vite build" } })
     assert.ok(cap.logs.some((l) => l.includes("onBuildStart")))
   } finally {
@@ -101,7 +101,7 @@ test("build-tracker: real rustc error (anchor pattern) IS detected as failure", 
   const cap = captureConsole()
   try {
     const fakeClient = { app: { log: async () => {} } }
-    const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, { verbose: true })
     const tC = { callID: "real1", tool: "bash", args: { command: "cargo build" } }
     await plugin["tool.execute.before"](tC, { args: tC.args })
     cap.logs.length = 0
@@ -155,4 +155,22 @@ test("build-tracker: graceful when tui API is missing", async () => {
   const t = { callID: "notoast1", tool: "bash", args: { command: "npm run build" } }
   await plugin["tool.execute.before"](t, { args: t.args })
   await plugin["tool.execute.after"](t, { output: "ok" })
+})
+
+test("build-tracker: default silent — no stdout, status still goes to app.log (Termux ghost fix)", async () => {
+  const cap = captureConsole()
+  try {
+    const logs = []
+    const fakeClient = { app: { log: async (m) => { logs.push(m) } } }
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
+    const t = { callID: "silent1", tool: "bash", args: { command: "npm run build" } }
+    await plugin["tool.execute.before"](t, { args: t.args })
+    assert.equal(cap.logs.length, 0)
+    const out = { output: "build succeeded" }
+    await plugin["tool.execute.after"](t, out)
+    assert.equal(cap.logs.length, 0)
+    assert.ok(logs.some((l) => l.body.message.includes("Build success")))
+  } finally {
+    cap.restore()
+  }
 })

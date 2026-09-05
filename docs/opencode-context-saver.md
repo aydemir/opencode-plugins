@@ -141,6 +141,26 @@ Tek çağrılık flag ile global kapatma arası:
 - **Hata kuralı:** geçersiz `regex:` ve negatif sayaç config
   yüklenirken throw eder (fail loud).
 
+### Marker'da Tam Bilgilendirme (TASK-108)
+
+LLM, kırpılmış bir tool çıktısını gördüğünde **tek bilgi kaynağı**
+marker metnidir. `[context-saver]` system disclosure
+(`experimental.chat.system.transform`) OpenCode runtime'ında
+tetiklenmeyebilir (hook sözleşmesi belirsiz). Bu yüzden marker, **5 kaçış
+yolunun hepsini** deterministik olarak listeler.
+
+Kısa marker formatı:
+
+```
+[... pruned: 50000→300 chars. Raw ways: no_prune/noPrune/skipPrune (per-call flag) | embed "#no-prune" in args | disableForCalls=N (next N raw) | alwaysRawCommands (config whitelist) | enabled:false (off) ...]
+```
+
+- `skipWhenContains` config ile değiştirildiğinde marker otomatik güncellerir
+  (örn. `"%%raw%%"` → marker'da `embed "%%raw%%" in args` görünür).
+- İlk kırpma (uzun marker) yüzde tasarrufu + aynı 5 yolu ayrıntılı yazar.
+- LLM marker'ı gördüğünde hangi yolu seçeceğini **kendi başına**
+  belirleyebilir.
+
 ### 3. Tool şemasına `no_prune` parametresi (deneysel)
 
 OpenCode plugin API tool şemasını override etmeye izin veriyorsa

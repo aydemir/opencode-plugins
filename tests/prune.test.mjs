@@ -120,13 +120,16 @@ test("formatPruneMarker: custom escapeHint is preserved", () => {
   assert.ok(!m.includes("no_prune=true"))
 })
 
-test("formatShortPruneMarker: short marker keeps off-path, drops long prose", () => {
+test("formatShortPruneMarker: short marker lists 5 escape ways, drops long prose", () => {
   const long = formatPruneMarker({ originalChars: 1000, keptChars: 150 })
   const short = formatShortPruneMarker({ originalChars: 1000, keptChars: 150 })
   assert.ok(short.includes("pruned:"))
   assert.ok(short.includes("enabled:false"))
+  // TASK-108: kısa marker artık 5 yolu içerir, dolayısıyla uzun marker'dan
+  // uzun olabilir. Invariant: "For raw output:" (uzun marker'a özgü) kısa
+  // marker'da yok.
   assert.ok(!short.includes("For raw output:"))
-  assert.ok(short.length < long.length)
+  assert.ok(long.includes("For raw output:"))
 })
 
 test("pruneMiddle: second pass on short-marked input stays marked", () => {
@@ -158,4 +161,28 @@ test("matchesRawPatterns: regex: prefix and nested values", () => {
 
 test("matchesRawPatterns: invalid regex throws (fail loud)", () => {
   assert.throws(() => matchesRawPatterns({ command: "x" }, ["regex:(["]))
+})
+
+test("formatShortPruneMarker: lists all 5 escape ways with default skipWhenContains", () => {
+  const out = formatShortPruneMarker({ originalChars: 50000, keptChars: 300 })
+  assert.match(out, /no_prune\/noPrune\/skipPrune/)
+  assert.match(out, /#no-prune/)
+  assert.match(out, /disableForCalls/)
+  assert.match(out, /alwaysRawCommands/)
+  assert.match(out, /enabled:false/)
+})
+
+test("formatShortPruneMarker: respects custom skipWhenContains", () => {
+  const out = formatShortPruneMarker(
+    { originalChars: 1000, keptChars: 200 },
+    { skipWhenContains: "%%raw%%" },
+  )
+  assert.match(out, /%%raw%%/)
+  assert.doesNotMatch(out, /#no-prune/)
+})
+
+test("formatShortPruneMarker: backwards-compatible when called with only stats", () => {
+  const out = formatShortPruneMarker({ originalChars: 100, keptChars: 50 })
+  assert.match(out, /Raw ways:/)
+  assert.match(out, /#no-prune/)
 })

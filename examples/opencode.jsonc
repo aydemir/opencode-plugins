@@ -2,7 +2,8 @@
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     "./plugins/opencode-context-saver.ts",
-    "./plugins/opencode-build-tracker.ts"
+    "./plugins/opencode-build-tracker.ts",
+    "./plugins/opencode-truncation-noticer.ts"
   ],
   // opencode-context-saver opsiyonel ayarları:
   //   enabled:        false   → tüm prune'ları devre dışı bırakır (debug).
@@ -30,6 +31,11 @@
       "discloseOnce": true,
       "alwaysRawCommands": [],
       "disableForCalls": 0
+    },
+    "opencode-truncation-noticer": {
+      "enabled": true,
+      "watchTools": ["read"],
+      "skipWhenContains": "#no-trunc-notice"
     }
   },
   "mcp": {

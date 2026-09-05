@@ -19,10 +19,13 @@
     "opencode-plugin",
     "opencode-context-saver",
     "opencode-build-tracker",
+    "opencode-truncation-noticer",
     "opencode-context-saver",
     "opencode-build-tracker",
+    "opencode-truncation-noticer",
     "dhs",
-    "ptc"
+    "ptc",
+    "truncation-notice"
   ],
   "author": "",
   "license": "MIT",
@@ -38,8 +41,10 @@
   "exports": {
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
     "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
+    "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js",
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
-    "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js"
+    "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
+    "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js"
   },
   "files": [
     "dist",

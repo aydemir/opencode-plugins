@@ -84,7 +84,15 @@ const DEFAULT_CONFIG: CompactConfig = {
   alwaysRawCommands: [],
   disableForCalls: 0,
   skipWhenContains: "#no-prune",
-  skipTools: ["read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search"],
+  skipTools: [
+    "read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search",
+    // MCP server tools (TASK-110): opencode-mcp-bash-tools kendi kırpma/ham kararını veriyor.
+    // Plugin bu tool'lara dokunmamalı — aksi halde iki kırpma katmanı üst üste biner.
+    // opencode tool adını `<server-name>_<tool-name>` olarak expose eder
+    // (örn. `opencode-mcp-bash-tools_bash_safe`); `mcp__server__tool` değil.
+    "opencode-mcp-bash-tools_bash_safe",
+    "opencode-mcp-bash-tools_bash_raw",
+  ],
 }
 
 function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
@@ -139,8 +147,12 @@ export const DISCLOSURE_SENTINEL = "[context-saver]"
  * (~40 token); tam mekanizma ilk kırpma marker'ında zaten verilir.
  */
 export const DISCLOSURE_TEXT =
-  "[context-saver] Large tool outputs are middle-pruned with a \"[... pruned ...]\" marker. " +
-  "For raw output: pass no_prune=true (this call), embed #no-prune in args, or set enabled:false (off) in plugin config."
+  "[context-saver] Native bash/read/grep are auto-pruned by this plugin " +
+  "(marker format: `[... pruned: N→M chars (X% saved) ...]`). " +
+  "For schema-controlled bypass, prefer MCP tools `bash_safe` (auto-pruned) " +
+  "or `bash_raw` (full output) from opencode-mcp-bash-tools server. " +
+  "Per-call flags `no_prune`/`disableForCalls` are NOT honored by opencode " +
+  "tool schemas — only `bash_safe`/`bash_raw` work."
 
 /**
  * Per-call sayaç doldurma: `disableForCalls` / `disable_for_calls`
@@ -235,9 +247,20 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
             tailChars: config.tailChars,
             markerBuilder: (stats) => {
               const sid = t.sessionID ?? "unknown"
-              if (disclosedSessions.has(sid)) return formatShortPruneMarker(stats)
+              const shortOpts = {
+                skipWhenContains: config.skipWhenContains ?? "#no-prune",
+                disableForCalls: config.disableForCalls ?? 0,
+                alwaysRawCommands: config.alwaysRawCommands ?? [],
+              }
+              if (disclosedSessions.has(sid)) return formatShortPruneMarker(stats, shortOpts)
               disclosedSessions.add(sid)
-              return formatPruneMarker(stats)
+              const longHint =
+                `no_prune/noPrune/skipPrune (this call) | ` +
+                `embed "${shortOpts.skipWhenContains}" in args | ` +
+                `disableForCalls=N (next N raw) | ` +
+                `alwaysRawCommands (config whitelist) | ` +
+                `enabled:false (off in plugin config)`
+              return formatPruneMarker({ ...stats, escapeHint: longHint })
             },
             enabled: config.enabled,
             skipWhenContains: config.skipWhenContains,
@@ -274,41 +297,14 @@ export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<str
       // else: küçük output'a dokunma, ham kalsın.
     },
 
-    "chat.message": async (_msgInput, _msgOutput) => {
-      if (logs.length === 0 || !config.injectAsSummary || turnCallCount === 0) return
-
-      const summary = formatCompactLog(logs)
-      const totalCalls = logs.length
-      const recentErrors = logs.filter((e) => e.error).length
-
-      const lines = [
-        `\n📋 [Araç Özeti] ${totalCalls} çağrı bu turda`,
-      ]
-      if (recentErrors > 0) lines.push(`⚠️ ${recentErrors} hata oluştu`)
-      lines.push("", summary, "", "📊 Araç sonuçları özlendi — context tasarruf edilmiştir", "")
-
-      // showToast YOK (2026-09-04): toast metni istemcide sonraki prompt'un
-      // parts dizisine id'siz text parçası olarak sızıp oturumu kilitliyordu
-      // ("invalid user part before save" / EventV2.InvalidDurableEvent).
-      // Özet yalnızca kalıcı app log'a yazılır, sohbete enjekte edilmez.
-      await client.app?.log?.({
-        body: {
-          service: "context-saver",
-          level: recentErrors > 0 ? "error" : "info",
-          message: lines.join("\n"),
-          extra: { total: totalCalls, errors: recentErrors },
-        },
-      })
+    "chat.message": async () => {
+      // Sessiz mod: ozet client.app.log ile TUI'ya yazilmiyor.
+      // app.log Termux/OpenTUI uzerinde hayalet yazi (ghost text) birakiyordu:
+      // eski session-end bildirimi overlay'i render'a kadar input'ta kaliyordu.
+      // Ozet kaybi yok: kirpma marker'lari zaten model ciktisinda duruyor.
       turnCallCount = 0
     },
 
-    event: async ({ event }) => {
-      if ((event as Record<string, unknown>).type === "session.idle" && logs.length > 0) {
-        const total = logs.length
-        const errors = logs.filter((e) => e.error).length
-        await client.app.log({ body: { service: "context-saver", level: "info", message: `Oturum tamamlandı: ${total} çağrı, ${errors} hata`, extra: { total, errors } } })
-      }
-    },
   }
 }
 

@@ -14,7 +14,8 @@
   },
   "include": [
     "plugins/**/*.ts",
-    "docs/**/*.ts"
+    "docs/**/*.ts",
+    "plugins/mcp-bash-tools/src/**/*.ts"
   ],
   "exclude": [
     "node_modules",

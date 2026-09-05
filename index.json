@@ -1,7 +1,7 @@
 {
   "name": "opencode-plugins",
   "version": "0.1.0",
-  "description": "OpenCode için eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode) ve opencode-build-tracker.",
+  "description": "OpenCode için eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode), opencode-build-tracker, opencode-truncation-noticer.",
   "type": "module",
   "private": true,
   "plugins": [
@@ -18,20 +18,49 @@
       "docs": "docs/opencode-build-tracker.md",
       "tests": "tests/build-tracker.test.mjs",
       "status": "stable"
+    },
+    {
+      "id": "opencode-truncation-noticer",
+      "file": "plugins/opencode-truncation-noticer.ts",
+      "docs": "docs/opencode-truncation-noticer.md",
+      "tests": "tests/truncation-noticer.test.mjs",
+      "status": "stable",
+      "purpose": "Native read tool sessiz kırpmasını 'devamı var' marker'ı ile bildirir; küçük context'li modeller için yarım içerik üzerinden karar vermeyi engeller."
     }
   ],
   "shared_lib": {
-    "path": "plugins/lib/prune.ts",
-    "exports": [
-      "PRUNE_MARKER",
-      "codePointLength",
-      "pruneMiddle",
-      "extractSummarySafe",
-      "resolvePruneBudget",
-      "isBuildCommand",
-      "extractErrors",
-      "formatPruneMarker",
-      "shouldSkipForArgs"
+    "path": "plugins/lib/",
+    "modules": [
+      {
+        "path": "plugins/lib/prune.ts",
+        "used_by": ["opencode-context-saver"],
+        "exports": [
+          "PRUNE_MARKER",
+          "codePointLength",
+          "pruneMiddle",
+          "extractSummarySafe",
+          "resolvePruneBudget",
+          "isBuildCommand",
+          "extractErrors",
+          "formatPruneMarker",
+          "shouldSkipForArgs"
+        ]
+      },
+      {
+        "path": "plugins/lib/truncation-notice.ts",
+        "used_by": ["opencode-truncation-noticer"],
+        "exports": [
+          "MARKER_SENTINEL",
+          "DISCLOSURE_SENTINEL",
+          "DISCLOSURE_TEXT",
+          "DEFAULT_SKIP_CONTAINS",
+          "countLines",
+          "parseLastLineNo",
+          "buildMarker",
+          "resolveFilePath"
+        ],
+        "note": "Sabitler ve helper'lar lib'de — opencode 1.18.29 getLegacyPlugins iterate kuralı için plugin dosyaları sadece 'default' export eder. Bu sayede string/object export'lar 'Plugin export is not a function' hatası vermez."
+      }
     ]
   },
   "tests": {
@@ -71,6 +100,37 @@
       "id": "DECISION-005",
       "date": "2026-09-02",
       "summary": "TASK-104 per-call prune bypass: t.args no_prune/noPrune/skipPrune + skipWhenContains substring. Plugin init enabled korunur, per-call bypass eklendi."
+    },
+    {
+      "id": "DECISION-006",
+      "date": "2026-09-05",
+      "summary": "TASK-108 marker tam bilgilendirme: formatShortPruneMarker artık 5 kaçış yolunu listeler (no_prune/noPrune/skipPrune, skipWhenContains substring, disableForCalls, alwaysRawCommands, enabled:false). Config skipWhenContains dinamik olarak marker'a yansır. Kısa marker LLM'in tek güvenilir bilgi kaynağıdır (system disclosure hook sözleşmesi belirsiz)."
+    },
+    {
+      "id": "KD-2026-09-05-mcp-bypass",
+      "date": "2026-09-05",
+      "summary": "Plugin-only yaklaşımda no_prune=true ve disableForCalls=N schema yüzünden ölü. Plugin + MCP hibrit yaklaşıma geçiş: yeni mcp-bash-tools server bash_safe + bash_raw toollarını schema-kontrollü sunacak."
+    },
+    {
+      "id": "KD-2026-09-05-read-trunc",
+      "date": "2026-09-05",
+      "summary": "OpenCode native read tool sessizce kırpıyor (offset/limit sonunda 'devamı var' işareti yok). TASK-111: yeni opencode-truncation-noticer plugin'i tool.execute.after'da output'u parse edip dosyanın toplam satır sayısıyla karşılaştırır; kalan satır varsa '[tn] truncated: ...' marker'ı ekler. bash_safe bash_raw + read tn ile 'kırpma artık gözlemlenebilir' mimarisi tamamlanır."
+    }
+  ],
+  "mcp_servers": [
+    {
+      "id": "opencode-mcp-bash-tools",
+      "type": "mcp-server",
+      "file": "plugins/mcp-bash-tools/src/server.ts",
+      "build": "dist/plugins/mcp-bash-tools/server.js",
+      "docs": "plugins/mcp-bash-tools/README.md",
+      "status": "stable",
+      "related_tasks": [
+        "TASK-109",
+        "TASK-110",
+        "TASK-111"
+      ],
+      "last_live_test": "2026-09-05"
     }
   ]
 }

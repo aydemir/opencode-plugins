@@ -19,7 +19,7 @@
 
 ## Plugins — `plugins/`
 
-İki plugin, TypeScript ESM, `Plugin` tipi `@opencode-ai/plugin`'dan.
+Pluginler TypeScript ESM, `Plugin` tipi `@opencode-ai/plugin`'dan. MCP server `plugins/mcp-bash-tools/` ayrıca bkz — schema-kontrollü bypass için (TASK-109).
 
 ### `plugins/opencode-context-saver.ts` (195 satır)
 
@@ -59,6 +59,33 @@ Public API:
 
 (Detaylar `docs/opencode-build-tracker.md` ve kaynak dosyada.)
 
+### `plugins/opencode-truncation-noticer.ts` (TASK-111)
+
+**Amaç:** OpenCode native `read` tool'unun sessiz kırpmasını gözlemler
+ve "devamı var" marker'ı ekler. Küçük context'li modeller için
+yarım içerik üzerinden karar vermeyi engeller.
+
+Public API:
+- `default` — `TruncationNoticePlugin`
+- `MARKER_SENTINEL`, `DISCLOSURE_SENTINEL`, `DISCLOSURE_TEXT` — sabitler
+
+Event hook'ları:
+- `experimental.chat.system.transform` — disclosure (idempotent, `[tn-disclosed]` sentinel)
+- `tool.execute.after` — output parse + marker ekleme (sadece `read` tool)
+
+Config (`TruncationNoticeConfig`):
+| Alan | Default | İşlev |
+|------|---------|-------|
+| `enabled` | `true` | Global toggle |
+| `watchTools` | `["read"]` | Hangi tool'lara uygulanacak |
+| `lineSeparator` | `"\t"` | Output satır prefix ayracı |
+| `skipWhenContains` | `"#no-trunc-notice"` | Per-call bypass substring |
+
+Tamamlayıcı mimari:
+- `opencode-context-saver` → prune (kırpma)
+- `opencode-mcp-bash-tools` → bash_safe (marker'lı) + bash_raw (ham)
+- **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
+
 ## Paylaşılan Kütüphane — `plugins/lib/`
 
 ### `plugins/lib/prune.ts` (302 satır)
@@ -81,6 +108,85 @@ burada. **Public API (export edilenler):**
 | `PruneMiddleOptions` | interface | `enabled`, `skipWhenContains`, `markerBuilder`… |
 
 **Karar:** LLM özeti **yok** (bilinçli). Dosya başında gerekçe yazılı.
+
+### `plugins/lib/truncation-notice.ts` (TASK-111)
+
+Truncation Noticer için sabitler ve pure helper'lar. Plugin dosyası
+sadece `default` export eder (Plugin instance); tüm sabitler ve
+yardımcılar burada toplanır.
+
+| Sembol | Tür | İşlev |
+|--------|-----|-------|
+| `MARKER_SENTINEL` | `string` (sabit) | `"[tn] truncated:"` — marker başlangıç imzası |
+| `DISCLOSURE_SENTINEL` | `string` (sabit) | `"[tn-disclosed]"` — idempotent system notu |
+| `DISCLOSURE_TEXT` | `string` (sabit) | Oturum başı LLM bilgilendirme metni |
+| `DEFAULT_SKIP_CONTAINS` | `string` (sabit) | `"#no-trunc-notice"` — per-call bypass substring |
+| `countLines` | `(text: string) => number` | wc -l semantiği (trailing newline sayılmaz) |
+| `parseLastLineNo` | `(output: string, sep?: string) => number` | `<n>\t<line>` formatından son satır no |
+| `buildMarker` | `(last, total, path, nextOffset) => string` | Marker üretir (offset/sed hint dahil) |
+| `resolveFilePath` | `(raw: unknown) => string \| null` | cwd-relative path resolution |
+
+**Neden lib'de?** opencode 1.18.29 `getLegacyPlugins`
+(packages/opencode/src/plugin/index.ts:107) tüm modül export'larını
+`Object.values(mod)` ile iterate edip her birinin function olmasını
+bekliyor. String/object export'lar "Plugin export is not a function"
+hatası veriyor. Sabitleri lib'e taşıyarak plugin dosyasını yalnızca
+`default` export ile sınırlı tutuyoruz. Bu pattern opencode'daki
+diğer plugin'ler için de gerekli (context-saver, build-tracker aynı
+regression'a sahip — ayrı takip görevi).
+
+## MCP Servers — `plugins/mcp-bash-tools/`
+
+(planlanıyor — TASK-109, TASK-110)
+
+Yeni MCP server: opencode `bash` tool'unun schema kontrollü
+alternatifleri. Plugin-only yaklaşımda `no_prune=true`,
+`disableForCalls=N` gibi per-call argümanlar opencode'un native
+tool şemasında tanımlı değildi → ölü kaçış yolları. MCP ile
+kendi tool'larımızı schema'sı ile birlikte sunuyoruz.
+
+### `plugins/mcp-bash-tools/src/server.ts` (planlanıyor)
+
+stdio MCP server, transport: stdio (opencode MCP standardı).
+
+Tools:
+- `bash_safe` — middle-prune + marker (default).
+  Schema: `command`, `description`, `max_chars?` (default 30000),
+  `head_chars?` (200), `tail_chars?` (200), `timeout_ms?` (30000).
+- `bash_raw` — kırpmaz, full output.
+  Schema: `command`, `description`, `max_chars?` (500000, sadece
+  dosya koruma), `timeout_ms?` (30000).
+
+Prune mantığı: `plugins/lib/prune.ts` içindeki `pruneMiddle` +
+`formatPruneMarker` import edilerek yeniden kullanılır (TASK-101
+formatı, uyumlu).
+
+Marker'da escape hint: `For raw output, call bash_raw with the same
+command.` — schema kontrollü, çalışan bypass.
+
+**Plugin etkileşimi (TASK-110):** Plugin `tool.execute.after` hook'unda
+MCP tool adlarını (`opencode-mcp-bash-tools_bash_safe`,
+`opencode-mcp-bash-tools_bash_raw`) atlar — MCP zaten kendi
+kararını veriyor, ikinci kırpma katmanı olmaz.
+
+**opencode.jsonc kaydı (kullanıcı onayıyla):**
+
+```jsonc
+{
+  "mcp": {
+    "opencode-mcp-bash-tools": {
+      "type": "local",
+      "command": ["node", "dist/plugins/mcp-bash-tools/server.js"],
+      "enabled": true
+    }
+  }
+}
+```
+
+**Karar:** Hibrit (plugin + MCP) — plugin native tool'ları otomatik
+kırpar (geriye uyumlu, kullanıcı sıfır aksiyon alır), MCP server
+LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
+çalışır, birlikte çalıştıklarında plugin MCP tool'larına dokunmaz.
 
 ## Docs — `docs/`
 

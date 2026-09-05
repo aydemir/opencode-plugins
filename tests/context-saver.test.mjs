@@ -52,22 +52,20 @@ test("context-saver: non-string output goes through JSON.stringify", async () =>
   assert.ok(output.output !== null)
 })
 
-test("context-saver: chat.message logs summary via app.log, never via toast (toast text leaks into next prompt)", async () => {
+test("context-saver: chat.message stays silent, never via toast or app.log (app.log leaves ghost text in TUI)", async () => {
   let toastCalls = 0
   let logged = null
-  const client = {
+  const cx = {
     tui: { showToast: async () => { toastCalls++ } },
     app: { log: async (entry) => { logged = entry } },
   }
-  const plugin = await ToolCompactPlugin({ client }, {})
+  const plugin = await ToolCompactPlugin({ client: cx }, {})
   const t = { callID: "5", tool: "bash", args: { command: "echo hi" } }
   await plugin["tool.execute.before"](t)
   await plugin["tool.execute.after"](t, { output: "hi" })
   await plugin["chat.message"]({}, {})
   assert.equal(toastCalls, 0)
-  assert.ok(logged.body.message.includes("Araç Özeti"))
-  assert.ok(logged.body.message.includes("bash("))
-  assert.equal(logged.body.service, "context-saver")
+  assert.equal(logged, null)
 })
 
 test("context-saver: skipTools — read tool long output not pruned", async () => {

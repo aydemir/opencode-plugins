@@ -131,3 +131,24 @@ node /tmp/<test>.mjs  # manual smoke
 # LLM bilgilendirmesi (marker formatı)
 jq '.marker_format // empty' docs/opencode-context-saver.md
 ```
+## [2026-09-05] DECISION: Termux ghost text fix via alternate-screen
+- Issue: #47255 (upstream anomalyco/opencode)
+- Problem: Termux TUI leaves ghost chars when lines shrink (main-screen diff renderer)
+- Fix: Change screenMode from "main-screen" to "alternate-screen" in runtime.lifecycle.ts:100
+- Patch: /root/opencode-fork2/termux-ghost-fix.patch
+- Docs: /root/opencode-fork2/TERMUX_GHOST_FIX.md
+- Status: Fork ready at /root/opencode-fork2, PR pending upstream decision
+- REASON: alternate-screen uses DECSET 1049 buffer swap, eliminates line-diff artifacts
+- SUPERSEDES: none
+
+## [2026-09-05] DECISION: Read tool silent truncation fix via observability plugin
+- Problem: OpenCode native `read` tool silently truncates at offset/limit boundary with no "more lines" notice. Small-context models (4K-32K) assume full read and make decisions on partial content.
+- Fix: New plugin `opencode-truncation-noticer` (`tn`) hooks `tool.execute.after`, parses `<lineNo>\t<line>` format, compares last line number to total lines in file (fs.readFileSync), appends `[tn] truncated: X more lines after line N (of T total). Re-read with offset=N+1 limit=200, OR use bash_raw: sed -n 'N+1,Tp' <path>` marker when truncated.
+- Plugin: plugins/opencode-truncation-noticer.ts
+- Lib: plugins/lib/truncation-notice.ts (sabitler + helper'lar)
+- Docs: docs/opencode-truncation-noticer.md
+- Task: TASK-111
+- Status: **stable** — 14/14 unit tests, 6/6 smoke test, **5/5 opencode 1.18.29 runtime simulation** (`/tmp/opencode/test_runtime_simulation.mjs`).
+- **Kök neden keşfi (2026-09-05):** opencode 1.18.29 `getLegacyPlugins` (packages/opencode/src/plugin/index.ts:107) tüm modül export'larını iterate edip function olmasını bekliyor → string export'lar "Plugin export is not a function" hatası veriyor. **Mevcut context-saver, build-tracker da aynı regression'a sahip** — onlar da ayrı bir görevde düzeltilmeli.
+- REASON: hook imzası (input, output) verilen `output.output: string`'i mutate etmemize izin veriyor (opencode-context-saver zaten kullanıyor); native read tool'un output format'ı biliniyor; observer + annotator pattern tek sorumluluk; lib'de helper'lar + plugin dosyasında sadece default export → opencode 1.18.29 iterate kuralıyla uyumlu.
+- SUPERSEDES: none
