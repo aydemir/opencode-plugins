@@ -125,5 +125,85 @@
     "created": "2026-09-04",
     "updated": "2026-09-04",
     "file": "tasks/done/TASK-107-eklenti-kesfi-llm-disclosure.md"
+  },
+  {
+    "id": "TASK-108",
+    "title": "Marker + disclosure tam bilgilendirme (5 yol + runtime doğrulama)",
+    "status": "cancelled",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "context-saver",
+      "lib-prune",
+      "llm-disclosure",
+      "gap"
+    ],
+    "depends_on": [
+      "TASK-105",
+      "TASK-107"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/todo/TASK-108-marker-disclosure-tam-bilgilendirme.md",
+    "cancellation_reason": "TASK-110 plugin DISCLOSURE_TEXT'i tamamen yeniledi (bash_safe/bash_raw tanıtımı + 5 yol yerine 3 gerçek yol). TASK-108'in \"5 yol\" iddiası artık yanıltıcı; MCP server schema-kontrollü bypass gerçek çözüm. Bu task iptal.",
+    "superseded_by": "TASK-110"
+  },
+  {
+    "id": "TASK-109",
+    "title": "MCP server: bash_safe + bash_raw (schema kontrollü bypass)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "mcp",
+      "bash",
+      "schema-control",
+      "real-bypass"
+    ],
+    "depends_on": [],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/done/TASK-109-mcp-bash-tools.md"
+  },
+  {
+    "id": "TASK-110",
+    "title": "Plugin: MCP tool'larını atla (bash_safe/bash_raw'a dokunma)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "plugin",
+      "mcp",
+      "skip-tools",
+      "hibrit"
+    ],
+    "depends_on": [
+      "TASK-109"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/done/TASK-110-plugin-skip-mcp-tools.md"
+  },
+  {
+    "id": "TASK-111",
+    "title": "Plugin: Read tool truncation notice (dosyanın devamı varsa bildir)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "plugin",
+      "read-tool",
+      "truncation",
+      "mcp-bypass",
+      "ux",
+      "small-context"
+    ],
+    "depends_on": [
+      "TASK-109",
+      "TASK-110"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/done/TASK-111-read-truncation-notice.md"
   }
 ]
