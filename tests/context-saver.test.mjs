@@ -128,8 +128,12 @@ test("context-saver: system.transform injects disclosure once", async () => {
   await plugin["experimental.chat.system.transform"]({}, output)
   assert.equal(output.system.length, 2)
   assert.ok(output.system[1].includes("[context-saver]"))
-  assert.ok(output.system[1].includes("no_prune=true"))
-  assert.ok(output.system[1].includes("enabled:false"))
+  // MCP-era disclosure (KD-2026-09-05-mcp-bypass): per-call flag'ler schema
+  // yoluyla olu; bypass yolu bash_safe/bash_raw. Eski "no_prune=true" /
+  // "enabled:false" beklentisi stale (TASK-109 sonrasi metin degisti).
+  assert.ok(output.system[1].includes("bash_safe"))
+  assert.ok(output.system[1].includes("bash_raw"))
+  assert.ok(output.system[1].includes("NOT honored"))
 })
 
 test("context-saver: system.transform skips when disclosure already present", async () => {
