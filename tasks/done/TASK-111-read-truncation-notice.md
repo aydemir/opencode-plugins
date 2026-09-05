@@ -1,7 +1,7 @@
 ---
 id: TASK-111
 title: "Plugin: Read tool truncation notice (dosyanın devamı varsa bildir)"
-status: in-progress
+status: done
 priority: P1
 created: 2026-09-05
 updated: 2026-09-05
@@ -11,6 +11,18 @@ depends_on: [TASK-109, TASK-110]
 ---
 
 # TASK-111 — Plugin: Read tool truncation notice
+
+> **Backfill notu (2026-09-05):** Dosya başlığında `status: in-progress`
+> yazıyordu ama `tasks/index.json`'da `done` (AGENTS.md "stable" diyor).
+> Status `done`'a çekildi. Koda karşı doğrulandı:
+> `plugins/opencode-truncation-noticer.ts` (Plugin + default export),
+> `plugins/lib/truncation-notice.ts` (sabitler + helper'lar),
+> `tests/truncation-noticer.test.mjs` (14/14 unit, 6/6 smoke, 5/5
+> opencode 1.18.29 runtime sim). 1.18.29 `getLegacyPlugins` regression'ı
+> için plugin dosyası sadece `default` export ediyor (lib'e taşınmış
+> tüm sabitler); **aynı regression context-saver/build-tracker'da da
+> var** — ayrı görev açılmalı. Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
 
 ## Amaç
 

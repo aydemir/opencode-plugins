@@ -4,13 +4,20 @@ title: "Geçici kapatma + always-raw whitelist"
 status: done
 priority: P2
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 environment: both
 labels: [context-saver, lib-prune, escape-hatch]
 depends_on: [TASK-102, TASK-104]
 ---
 
 # TASK-106 — Geçici kapatma + always-raw whitelist
+
+> **Backfill notu (2026-09-05):** Koda karşı doğrulandı. `matchesRawPatterns`
+> (`plugins/lib/prune.ts:165`) + `rawCounters` Map + `readRawRefill`
+> (`plugins/opencode-context-saver.ts:161,178,228-240`) + `disableForCalls`
+> config validasyonu (`plugins/opencode-context-saver.ts:114-116`) hepsi
+> yerinde. Karar: `tasks/decisions.md` §"Done task dosyalarını koda karşı
+> backfill et".
 
 ## Amaç
 

@@ -11,6 +11,8 @@ import {
   resolvePruneBudget,
   shouldSkipForArgs,
 } from "./lib/prune.js"
+import { DISCLOSURE_SENTINEL, DISCLOSURE_TEXT } from "./lib/disclosure.js"
+import { readRawRefill } from "./lib/raw-refill.js"
 
 interface ToolLogEntry {
   name: string
@@ -141,31 +143,14 @@ function formatCompactLog(entries: ToolLogEntry[]): string {
 }
 
 /** Bir kezlik sistem notunun imzası (idempotency kontrolü). */
-export const DISCLOSURE_SENTINEL = "[context-saver]"
 /**
  * Oturum başında LLM'e bir kez enjekte edilen kaçış notu. Kısa tutulur
  * (~40 token); tam mekanizma ilk kırpma marker'ında zaten verilir.
  */
-export const DISCLOSURE_TEXT =
-  "[context-saver] Native bash/read/grep are auto-pruned by this plugin " +
-  "(marker format: `[... pruned: N→M chars (X% saved) ...]`). " +
-  "For schema-controlled bypass, prefer MCP tools `bash_safe` (auto-pruned) " +
-  "or `bash_raw` (full output) from opencode-mcp-bash-tools server. " +
-  "Per-call flags `no_prune`/`disableForCalls` are NOT honored by opencode " +
-  "tool schemas — only `bash_safe`/`bash_raw` work."
-
 /**
  * Per-call sayaç doldurma: `disableForCalls` / `disable_for_calls`
  * pozitif tamsayı (veya sayısal string) ise döndür, yoksa undefined.
  */
-export function readRawRefill(args: unknown): number | undefined {
-  if (typeof args !== "object" || args === null) return undefined
-  const o = args as Record<string, unknown>
-  const v = o.disableForCalls ?? o.disable_for_calls
-  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN
-  return Number.isInteger(n) && (n as number) > 0 ? (n as number) : undefined
-}
-
 export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, unknown>) => {
   const config = resolveConfig((options ?? {}) as Partial<CompactConfig>)
   const logs: ToolLogEntry[] = []

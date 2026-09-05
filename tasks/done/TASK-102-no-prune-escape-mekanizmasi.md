@@ -4,13 +4,23 @@ title: "no_prune escape mekanizması (toggle + inline marker + LLM declaration)"
 status: done
 priority: P1
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-05
 environment: both
 labels: [context-saver, escape-hatch, llm-disclosure]
 depends_on: ["TASK-101"]
 ---
 
 # TASK-102 — no_prune escape mekanizması
+
+> **Backfill notu (2026-09-05):** Kapatıldığı sırada `opencode-context-saver.ts`'teki
+> `pruneMiddle` çağrı sayısı **2** idi (L127 tool-log entry, L144 output.event).
+> TASK-105/110 sonrasında bu çağrılar **tek closure'lı çağrıya** birleşti
+> (`plugins/opencode-context-saver.ts:245`); `markerBuilder` inline longup ile
+> uzun/kısa marker toggle'ı eklendi. "Her iki `pruneMiddle` çağrısına"
+> ifadesi 2026-09-02 tarihli snapshot'ı yansıtır, bugünkü kod için
+> "tek `pruneMiddle` çağrısına" olarak okunmalı. Diğer kapsam (config wiring,
+> `enabled=false` budget skip, docs, testler) aynen geçerli. Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
 
 ## Amaç
 
@@ -36,7 +46,9 @@ bir mekanizma sağlamak. Üç giriş noktası hedeflendi:
   - `resolveConfig()`: `enabled !== false` ise budget kontrolü yapılır
     (aksi halde gereksiz throw atardı — bkz. ilk testin ortaya çıkardığı
     bug).
-  - Her iki `pruneMiddle` çağrısına `enabled: config.enabled` eklendi.
+  - `pruneMiddle` çağrısına `enabled: config.enabled` eklendi
+    (kapatıldığı sırada 2 ayrı çağrı vardı; güncel kodda tek çağrı
+    `plugins/opencode-context-saver.ts:245` — backfill notuna bak).
 - **`examples/opencode.jsonc`**: `pluginOptions` bloğu + tüm alanların
   açıklamalı örneği eklendi.
 - **`docs/opencode-context-saver.md`**: "Escape Mekanizması (`no_prune`)"

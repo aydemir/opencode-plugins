@@ -12,6 +12,17 @@ depends_on: []
 
 # TASK-109 — MCP server: bash_safe + bash_raw
 
+> **Backfill notu (2026-09-05, kod doğrulaması):** Task dosyasında
+> "Prune mantığı: Mevcut `plugins/lib/prune.ts`'deki `pruneMiddle`
+> fonksiyonunu **import** edip yeniden kullan" denmesine rağmen bugün
+> `plugins/mcp-bash-tools/src/tools/bash_safe.ts:56` kendi `pruneMiddle`'ini
+> inline olarak tanımlıyor (ve `plugins/mcp-bash-tools/src/exec.ts:72`'de
+> ayrı bir `codePointLength` var). Bu kasıtlı bir **decoupling**'di —
+> MCP server standalone çalışabilsin diye `lib/`'ye bağımlılık istenmedi.
+> Ancak duplication gerçek: aynı algoritma iki yerde yaşıyor. Refactor
+> backlog'unda (birli `lib/prune.ts` + `import` geçişi). Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
+
 ## Amaç
 
 Plugin-only yaklaşımda LLM'e bildirilen 5 kaçış yolundan (`no_prune=true`,
@@ -49,9 +60,11 @@ gibi gerçek argümanlar çalışır.
   - `bash_raw` — full output. Argümanlar: `command` (required),
     `description`, `max_chars?` (500000, sadece dosya koruma),
     `timeout_ms?` (30000).
-- **Prune mantığı:** Mevcut `plugins/lib/prune.ts`'deki `pruneMiddle`
-  fonksiyonunu **import** edip yeniden kullan. Marker formatı tutarlı
-  olsun (TASK-101 formatı: `[... pruned: N→M chars (X% saved) ...]`).
+- **Prune mantığı:** `plugins/mcp-bash-tools/src/tools/bash_safe.ts:56`
+  kendi `pruneMiddle`'ini inline tanımlıyor (`plugins/lib/prune.ts`'i
+  **import etmiyor** — kasıtlı decoupling, refactor backlog'unda).
+  Marker formatı tutarlı olsun (TASK-101 formatı: `[... pruned: N→M
+  chars (X% saved) ...]`).
 - **Marker'da escape hint:** `bash_safe` kırptığında marker içinde
   şu geçsin: `For raw output, call bash_raw with the same command.`
   Bu sayede LLM marker'ı görünce ne yapacağını **bilir** (schema var,

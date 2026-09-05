@@ -12,6 +12,15 @@ depends_on: [TASK-109]
 
 # TASK-110 — Plugin: MCP tool'larını atla
 
+> **Backfill notu (2026-09-05):** Task "Kapsam — Yapılacak" bölümünde
+> `mcp__opencode-mcp-bash-tools__bash_safe` prefix'i yazıyordu — **yanlış**.
+> opencode tool adını `<server-name>_<tool-name>` formatında expose eder
+> (`opencode-mcp-bash-tools_bash_safe`); standart MCP `mcp__server__tool`
+> formatı DEĞİL. Bugünkü `DEFAULT_CONFIG.skipTools` listesi (L93-94)
+> doğru formatı kullanıyor. Task'ın "Notlar" bölümündeki ikinci "Önemli"
+> notu zaten doğru formatı yazmıştı — implementasyon o nota uygun. Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
+
 ## Amaç
 
 TASK-109 ile birlikte gelen `bash_safe` + `bash_raw` MCP tool'ları
@@ -32,9 +41,11 @@ kırpılır.
 ## Kapsam — Yapılacak
 
 - `plugins/opencode-context-saver.ts`:
-  - `DEFAULT_CONFIG.skipTools` dizisine MCP tool prefix'leri ekle:
-    `mcp__opencode-mcp-bash-tools__bash_safe`,
-    `mcp__opencode-mcp-bash-tools__bash_raw`.
+  - `DEFAULT_CONFIG.skipTools` dizisine MCP tool adları eklendi:
+    `opencode-mcp-bash-tools_bash_safe`,
+    `opencode-mcp-bash-tools_bash_raw` (opencode `<server>_<tool>`
+    formatı; standart `mcp__server__tool` değil — Notlardaki canlı
+    test ile doğrulandı).
   - Bu listeyi açıklayan yorum satırı.
 - **Skip kuralı:** Tool adı bu listede geçiyorsa `shouldPrune=false`
   ve output ham bırakılır. Plugin sadece `addLog` ile tool çağrısını

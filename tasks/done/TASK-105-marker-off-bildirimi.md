@@ -4,13 +4,19 @@ title: "Prune marker'ında tam çıktı için 'off' bildirimi"
 status: done
 priority: P1
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 environment: both
 labels: [context-saver, lib-prune, llm-disclosure]
 depends_on: [TASK-101, TASK-102]
 ---
 
 # TASK-105 — Prune marker'ında tam çıktı için "off" bildirimi
+
+> **Backfill notu (2026-09-05):** Koda karşı doğrulandı. Marker formatı bugün
+> `For raw output: ${escapeHint}`. (`plugins/lib/prune.ts:55-57`); kısa marker
+> `formatShortPruneMarker` (`plugins/lib/prune.ts:76`); uzun/kısa toggle
+> `disclosedSessions` Set'i (`plugins/opencode-context-saver.ts:176`). Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
 
 ## Amaç
 

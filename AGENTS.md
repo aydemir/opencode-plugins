@@ -131,6 +131,153 @@ node /tmp/<test>.mjs  # manual smoke
 # LLM bilgilendirmesi (marker formatı)
 jq '.marker_format // empty' docs/opencode-context-saver.md
 ```
+
+## Canlı Test (opencode runtime)
+
+Plugin/MCP davranışı **runtime'da farklı olabilir** — kod testleri
+`node:test` ile çalışır ama opencode plugin loader + tool dispatch
++ LLM roundtrip sadece canlı `opencode run` ile doğrulanır. Aşağıdaki
+prosedür 2026-09-05 disclosure regression tespitinde keşfedildi
+(`/tmp/opencode-disclosure-test/`), tekrarlanabilir olması için
+burada kilitlendi.
+
+### Hazırlık
+
+```bash
+# 1. Mevcut config yedekle (plugin listesi değişecek)
+cp ~/.config/opencode/opencode.jsonc ~/.config/opencode/opencode.jsonc.bak
+
+# 2. Test artifact dizini
+mkdir -p /tmp/opencode-live-test && cd /tmp/opencode-live-test
+
+# 3. opencode versiyonu (regression'lar sürüm-bağımlı)
+opencode --version
+```
+
+### Tek-Plugin İzolasyon Testi
+
+Bir plugin'in davranışını **yalnız** görmek istediğinde config'i
+geçici olarak değiştir:
+
+```bash
+# node -e ile plugin listesini sıfırla + izole plugin ekle
+node -e "
+const cfg = JSON.parse(require('fs').readFileSync(
+  '$HOME/.config/opencode/opencode.jsonc','utf8'));
+cfg.plugin = ['/root/opencode-plugins/plugins/<plugin>.ts'];
+require('fs').writeFileSync(
+  '$HOME/.config/opencode/opencode.jsonc',
+  JSON.stringify(cfg, null, 2));
+"
+```
+
+Önemli: opencode plugin'i `.ts` yoluyla import eder; **önce
+`npx tsc` çalıştır ki dist güncel olsun** (yoksa plugin eski
+dist'ten yüklenebilir).
+
+### LLM'e Disclosure/Bilgi Ulaşıyor mu?
+
+```bash
+# 4. LLM'in sistem prompt'unda bir marker var mı?
+timeout 120 opencode run --log-level INFO \
+  "Sistem prompt'unda '<sentinel-string>' geçiyor mu? Varsa kısa özetini ver. Tool çağırma." \
+  2>&1 | tee /tmp/opencode-live-test/01-disclosure.log | tail -10
+
+# 5. LLM kaçış yolunu biliyor mu?
+timeout 120 opencode run --log-level INFO \
+  "Bir bash komutu çıktısı çok uzun olabilir. Ham (tam) çıktıyı nasıl alırsın? Tool çağırma, sadece yöntem listele." \
+  2>&1 | tee /tmp/opencode-live-test/02-escape-knowledge.log | tail -10
+```
+
+**Beklenen:** LLM disclosure metninden gelen tool isimlerini +
+yöntemleri söyler. **Yoksa** plugin yüklenmemiştir — aşağıdaki
+"Plugin Yükleme Smell Testi"ne geç.
+
+### Plugin Yükleme Smell Testi (kritik)
+
+opencode 1.18.29 `getLegacyPlugins` (packages/opencode/src/plugin/
+index.ts:107) `Object.values(mod)` iterate eder ve **her export'un
+function olmasını bekler**. String export'lar `TypeError("Plugin
+export is not a function")` fırlatır, plugin **sessizce yüklenmez**
+ve tüm hook'lar (disclosure + tool.execute.after + ...) kaybolur.
+
+```bash
+# 6. Plugin modülünün export sırasını kontrol et
+cat > /tmp/opencode-live-test/check-exports.mjs <<'EOF'
+const m = await import('/root/opencode-plugins/plugins/<plugin>.ts')
+console.log("keys:", JSON.stringify(Object.keys(m)))
+console.log("types:", JSON.stringify(Object.values(m).map(v => typeof v)))
+EOF
+npx tsx /tmp/opencode-live-test/check-exports.mjs
+
+# 7. opencode loader mantığını birebir simüle et
+cat > /tmp/opencode-live-test/simulate-load.mjs <<'EOF'
+function getServerPlugin(entry) {
+  return typeof entry === "function" ? entry : null
+}
+const mod = await import('/root/opencode-plugins/plugins/<plugin>.ts')
+const loaded = []
+try {
+  for (const entry of Object.values(mod)) {
+    const plugin = getServerPlugin(entry)
+    if (!plugin) throw new TypeError("Plugin export is not a function")
+    loaded.push("OK:" + (plugin.name || "(anon)"))
+  }
+} catch (e) {
+  console.log("Threw:", e.message)
+}
+console.log("Loaded:", JSON.stringify(loaded))
+EOF
+npx tsx /tmp/opencode-live-test/simulate-load.mjs
+```
+
+**Beklenen:** `Loaded: ["OK:PluginFn","OK:PluginFn"]` — `Threw: null`.
+**Eğer `Threw: Plugin export is not a function`** → modülde string
+export var, plugin yüklenmiyor. **Fix:** sabitleri ve helper'ları
+`plugins/lib/*.ts` dosyalarına taşı, plugin dosyası sadece function
+export etsin. Örnek: `plugins/lib/disclosure.ts`,
+`plugins/lib/raw-refill.ts` (TASK-107 backfill, 2026-09-05).
+
+### Marker İçeriği LLM'e Ulaşıyor mu?
+
+```bash
+# 8. Büyük çıktı tetikleyerek prune marker'ını incele
+timeout 180 opencode run --log-level INFO \
+  "Native bash tool kullan. 'seq 1 3000 | head -c 50000' çalıştır. Çıktıyı özetle: hangi sayılar görünüyor?" \
+  2>&1 | tee /tmp/opencode-live-test/03-marker-content.log | tail -20
+
+# Marker'da 'For raw output:' + 'no_prune/noPrune/skipPrune' geçmeli:
+grep -E 'pruned:.*saved|raw output|no_prune' \
+  /tmp/opencode-live-test/03-marker-content.log
+```
+
+**Beklenen:** `[... pruned: N→M chars (X% saved). For raw output: ...]`
+çıktıda görünür. **Yoksa** plugin'in `tool.execute.after` hook'u
+fire etmiyor → plugin hiç yüklenmemiş demektir (yukarıdaki smell
+testine dön).
+
+### Temizlik
+
+```bash
+# Test bitti → config'i geri al
+mv ~/.config/opencode/opencode.jsonc.bak \
+   ~/.config/opencode/opencode.jsonc
+```
+
+### Bilinen Tuzaklar
+
+1. **LLM halüsinasyonu**: LLM "Hayır" diyebilir ama metin alıntısı
+   doğru olabilir. Şüphede alıntıyı kontrol et.
+2. **timeout 120s**: opencode startup ~2.5s, plugin yükleme ~15s
+   (tsc), LLM roundtrip 20-90s. 120s alt sınır; daha uzun
+   görevler için 180-240s.
+3. **`bash_safe`/`bash_raw` MCP** disclosure testini kirletir: LLM
+   bu tool'ları MCP description'dan öğrenir, context-saver
+   disclosure'ından değil. Native tool'lara sor.
+4. **".output truncated"** mesajı opencode native bash'in kendi
+   mesajıdır (plugin'in değil). Plugin prune marker'ı ayrıdır
+   (`[... pruned: ...]`).
+
 ## [2026-09-05] DECISION: Termux ghost text fix via alternate-screen
 - Issue: #47255 (upstream anomalyco/opencode)
 - Problem: Termux TUI leaves ghost chars when lines shrink (main-screen diff renderer)
@@ -152,3 +299,38 @@ jq '.marker_format // empty' docs/opencode-context-saver.md
 - **Kök neden keşfi (2026-09-05):** opencode 1.18.29 `getLegacyPlugins` (packages/opencode/src/plugin/index.ts:107) tüm modül export'larını iterate edip function olmasını bekliyor → string export'lar "Plugin export is not a function" hatası veriyor. **Mevcut context-saver, build-tracker da aynı regression'a sahip** — onlar da ayrı bir görevde düzeltilmeli.
 - REASON: hook imzası (input, output) verilen `output.output: string`'i mutate etmemize izin veriyor (opencode-context-saver zaten kullanıyor); native read tool'un output format'ı biliniyor; observer + annotator pattern tek sorumluluk; lib'de helper'lar + plugin dosyasında sadece default export → opencode 1.18.29 iterate kuralıyla uyumlu.
 - SUPERSEDES: none
+
+## [2026-09-05] DECISION: opencode 1.18.29 getLegacyPlugins regression fix
+- Problem: opencode 1.18.29 `getLegacyPlugins` (packages/opencode/src/plugin/index.ts:107) tüm modül export'larını iterate edip (`Object.values(mod)`) her birinin function olmasını bekliyor. String export'lar `TypeError("Plugin export is not a function")` fırlatıyor ve plugin instance'ı **hiç yüklenmiyor** — tüm hook'lar (disclosure + tool.execute.after + ...) sessizce kaybolur.
+- Canlı kanıt (2026-09-05, `/tmp/opencode-disclosure-test/`):
+  - Test 12: LLM "[context-saver] var mı?" sorusuna "Yok" dedi — disclosure hiç inject edilmiyordu.
+  - Plugin modülü `Object.keys`: `["DISCLOSURE_SENTINEL","DISCLOSURE_TEXT","ToolCompactPlugin","default","readRawRefill"]` — ilk 2 string, 3. function. `for (... of Object.values(mod))` 2. adımda throw.
+  - Test 9 (minimal plugin, sadece `default` export): disclosure "Evet" — minimal plugin yüklenebiliyor, sorun modüldeki string export'larda.
+- Fix uygulandı (2026-09-05):
+  - `plugins/lib/disclosure.ts` — `DISCLOSURE_SENTINEL` + `DISCLOSURE_TEXT` taşındı.
+  - `plugins/lib/raw-refill.ts` — `readRawRefill` taşındı.
+  - `plugins/opencode-context-saver.ts` artık sadece `ToolCompactPlugin` + `default` export ediyor. `npx tsc --noEmit` temiz.
+- Fix sonrası canlı doğrulama:
+  - Test 17: 30KB native bash → LLM "Tam çıktı için `bash_raw` (MCP) ya da dosyaya yazıp `Read` gerekir" dedi.
+  - Test 18: 50KB → marker içeriği LLM'e ulaştı `[... pruned: 10114→150 chars (98.5% saved). For raw output: no_prune/noPrune/skipPrune (this call)...]`.
+- **Açık iş:** ~~`opencode-build-tracker.ts` aynı regression'a sahip~~ — **2026-09-05 canlı test ile çürütüldü**: build-tracker sadece `BuildHooksPlugin` (function) + `default` (function) export ediyor, string export yok. `Object.values` iterate'inde throw etmiyor, plugin yüklendi ve `[Build Hook] 🔨 onBuildStart` / `[Build Hook] ✅ onBuildSuccess` logladı (`/tmp/opencode-disclosure-test/t22-bt-real-build.log`, `t24-bt-tsc-fail.log`). AGENTS.md'deki "Açık iş" notu kaldırıldı.
+- REASON: opencode iterate kuralı tek-tek export kontrolü yapıyor; helper'lar + sabitler lib'e taşınırsa plugin dosyası sadece function export eder ve iterate temiz kalır. Test/derleme setup'ı bozulmaz (TSM'ler sadece .ts import eder).
+- SUPERSEDES: none
+- İlgili: yukarıdaki "Canlı Test (opencode runtime)" bölümü — Smell Test + Disclosure Test prosedürü.
+
+## [2026-09-05] P3 FINDING: build-tracker stderr görünürlüğü
+- Test (`/tmp/opencode-disclosure-test/t24-bt-tsc-fail.log`): tsc
+  `error TS2304` stderr'a yazdı ama `tool.execute.after`'a gelen
+  `output.output` sadece stdout içerdi. `BUILD_ERROR_PATTERNS` regex'i
+  (`/^\s*error TS\d+/m`) output'ta eşleşmedi → `hasError=false` →
+  `endSession("success")` çağrıldı → `[Build Hook] ✅ onBuildSuccess`
+  loglandı (gerçekte başarısız derleme olmasına rağmen).
+- Kök neden: opencode native bash tool stderr'i `output.output`'a
+  koymuyor (ayrı kanal). Plugin'in başarı tespiti için stderr'a
+  erişmesi gerekir.
+- P3 (düşük öncelik) çünkü: terminal'de `[Build Hook] ✅ ...` görünüp
+  arkasından `fail.ts(1,19): error TS2304` çıktısı geliyor, kullanıcı
+  hatayı zaten okuyor. Bildirimsel UX kaybı var ama doğruluk kaybı yok.
+- İleride: opencode plugin API'si stderr'a erişim veriyorsa
+  (metadata veya ayrı hook) plugin `output.metadata` veya native
+  tool'un stderr field'ını okumalı.

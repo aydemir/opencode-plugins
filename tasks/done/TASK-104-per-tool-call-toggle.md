@@ -4,7 +4,7 @@ title: "Araç çağrısında per-call prune toggle (no_prune arg)"
 status: done
 priority: P2
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-05
 resolution: done
 environment: both
 labels: [context-saver, lib-prune, tool-call-toggle]
@@ -12,6 +12,12 @@ depends_on: [TASK-102]
 ---
 
 # TASK-104 — Araç çağrısında per-call prune toggle
+
+> **Backfill notu (2026-09-05):** Koda karşı doğrulandı. `shouldSkipForArgs`
+> (`plugins/lib/prune.ts:141`) + `t.args` sniffing
+> (`plugins/opencode-context-saver.ts:213`) + `CompactConfig.skipWhenContains`
+> (default `#no-prune`) hepsi yerinde. Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
 
 ## Amaç
 

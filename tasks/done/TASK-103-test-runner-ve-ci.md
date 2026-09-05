@@ -13,13 +13,18 @@ resolution: |
     throw eder — fail-fast guard, sessiz no-op call-site maskelemesin)
 priority: P2
 created: 2026-09-02
-updated: 2026-09-02
+updated: 2026-09-05
 environment: both
 labels: [testing, ci, quality]
 depends_on: []
 ---
 
 # TASK-103 — Test runner + CI
+
+> **Backfill notu (2026-09-05):** `tests/` dizini bugün 4 dosya içeriyor
+> (orijinalde 3 + TASK-111 ile `truncation-noticer.test.mjs`). `.github/workflows/test.yml`
+> (Node 22, `npm test`) ve `package.json` script'leri yerinde. Karar:
+> `tasks/decisions.md` §"Done task dosyalarını koda karşı backfill et".
 
 ## Amaç
 
