@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (opencode-context-saver, DHS PTC-mode) ve opencode-build-tracker (opencode-build-tracker)",
+  "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode), opencode-build-tracker ve opencode-truncation-noticer",
   "workspaces": [
-    "plugins/*"
+    "plugins/mcp-bash-tools"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "build:plugins": "for d in plugins/*; do echo \"build $d\"; done",
+    "build:plugins": "tsc --project tsconfig.json",
     "pretest": "npm run build",
     "test": "node --test --test-reporter=spec",
     "lint": "tsc --noEmit"
@@ -39,9 +39,6 @@
     "node": ">=18"
   },
   "exports": {
-    "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
-    "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
-    "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js",
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
     "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
     "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js"

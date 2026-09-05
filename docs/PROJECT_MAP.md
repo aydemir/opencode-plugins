@@ -240,10 +240,10 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 
 ## Build Artifact — `dist/`
 
-`npx tsc` çıktısı. Repoda kalır (alternatif: `.gitignore` + release
-artifact). Build:
+`npx tsc` çıktısı. Repoda tutulmaz (`.gitignore`); herkes kendi ortamında
+derler — npm veya bun (bun 1.4.0 dogrulandi: install+build+63/63). Build:
 ```bash
-npx tsc          # → dist/
+npm run build    # veya: bun run build   → dist/
 npx tsc --noEmit # sadece typecheck
 ```
 

@@ -120,6 +120,11 @@
       "id": "KD-2026-09-05-tui-live-t1",
       "date": "2026-09-05",
       "summary": "TASK-112: TUI canli test Asama 1 — cs-marker tmux scripti (scripts/tui-live/cs-marker.sh). Exit 0=PASS/1=FAIL/2=INCONCLUSIVE. Full E2E harness (PTY/snapshot) ayri repo isi. Kosum 4: PASS (20sn), done."
+    },
+    {
+      "id": "KD-2026-09-05-no-dist-bun",
+      "date": "2026-09-05",
+      "summary": "TASK-113: dist repoda yok (zaten gitignore), herkes npm/bun ile derler. bun 1.4.0 izole dogrulandi (install+build+63/63). workspaces bogus glob temizlendi. Release (tag/CHANGELOG/publish) ayri karar."
     }
   ],
   "mcp_servers": [

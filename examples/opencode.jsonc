@@ -43,6 +43,13 @@
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"],
       "enabled": true
+    },
+    // Kendi server'imiz: once derle (dist/ repoda yok):
+    //   npm run build   (veya: bun run build)
+    "opencode-mcp-bash-tools": {
+      "type": "local",
+      "command": ["node", "plugins/mcp-bash-tools/dist/server.js"],
+      "enabled": true
     }
   }
 }

@@ -1,12 +1,11 @@
 # opencode-context-saver — DHS PTC-mode
 
-`plugins/opencode-context-saver.ts` (`125 satır`) — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
+`plugins/opencode-context-saver.ts` — OpenCode tool çıktılarını PTC (Pass-Through Compact) modunda sıkıştırır. Amaç: gereksiz context'i kesmek, hata satırlarını korumak.
 
 ## Kaynak
 
-- Dosya: `plugins/opencode-context-saver.ts:1-125`
-- Kaynak kopya: `tmp/opencode-context-saver-full.ts` (codegraph ile doğrulandı, verbatim)
-- Derlenmiş: `plugins/opencode-context-saver.js`
+- Dosya: `plugins/opencode-context-saver.ts` (paylaşılan kod: `plugins/lib/`)
+- Derleme: `dist/` repoda tutulmaz — `npm run build` / `bun run build` ile üretilir
 
 ## Sözleşme
 

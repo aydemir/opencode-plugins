@@ -226,5 +226,25 @@
     "created": "2026-09-05",
     "updated": "2026-09-05",
     "file": "tasks/done/TASK-112-tui-canli-test-asama1.md"
+  },
+  {
+    "id": "TASK-113",
+    "title": "Docs tazele + no-dist politikası + bun alternatifi",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "docs",
+      "build",
+      "bun",
+      "release",
+      "no-dist"
+    ],
+    "depends_on": [
+      "TASK-112"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/done/TASK-113-docs-no-dist-bun.md"
   }
 ]

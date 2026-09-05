@@ -7,9 +7,10 @@ npm run build   # tsc --project tsconfig.json
 npm run lint    # tsc --noEmit
 ```
 
-Çıktılar:
+Çıktılar (`dist/` repoda tutulmaz — `npm run build` / `bun run build` ile üretilir):
 - `dist/plugins/opencode-build-tracker.js` + `.d.ts` + `.map`
 - `dist/plugins/opencode-context-saver.js` + `.d.ts` + `.map`
+- `dist/plugins/opencode-truncation-noticer.js` + `.d.ts` + `.map`
 - `dist/plugins/lib/prune.js`
 
 Doğrulama:

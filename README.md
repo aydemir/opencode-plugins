@@ -2,7 +2,7 @@
 
 > v0.1.0 — OpenCode için eklenti koleksiyonu
 
-OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context-saver` ( DHS PTC-mode)** context tasarrufu ve **`opencode-build-tracker` (`opencode-build-tracker`)** build yaşam döngüsü kancaları.
+OpenCode için eklenti koleksiyonu. Üç eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları ve **`opencode-truncation-noticer`** read-tool kırpma bildirimi. Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`).
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
 
@@ -12,6 +12,8 @@ OpenCode için eklenti koleksiyonu. İki eklenti içerir — **`opencode-context
 |---------|-------|------|----------|
 | **opencode-context-saver** | `plugins/opencode-context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
 | **opencode-build-tracker** | `plugins/opencode-build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
+| **opencode-truncation-noticer** | `plugins/opencode-truncation-noticer.ts` | Native read sessiz kırpmasına `devamı var` marker'ı | — |
+| **opencode-mcp-bash-tools** (MCP) | `plugins/mcp-bash-tools/` | `bash_safe` (otomatik kırpılan) + `bash_raw` (tam çıktı) | — |
 
 Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-tracker.md`
 
@@ -21,8 +23,9 @@ Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-trac
 
 ```bash
 git clone https://github.com/<org>/opencode-plugins.git
-cp opencode-plugins/plugins/opencode-context-saver.ts ~/.config/opencode/plugins/
-cp opencode-plugins/plugins/opencode-build-tracker.ts ~/.config/opencode/plugins/
+# Plugin'ler ./lib/*.ts import eder — tek .ts kopyalama ÇALIŞMAZ.
+# plugins/ dizinini bütün olarak kopyala:
+cp -r opencode-plugins/plugins ~/.config/opencode/plugins
 ```
 
 ### 2) Seçenek B — Doğrudan opencode.jsonc ile
@@ -44,12 +47,13 @@ cp opencode-plugins/plugins/opencode-build-tracker.ts ~/.config/opencode/plugins
 
 ### 3) Derleme (opsiyonel)
 
-Eklentiler TypeScript olarak doğrudan yüklenir. Ön-derleme istersen:
+Eklentiler TypeScript olarak doğrudan yüklenir. `dist/` repoda tutulmaz —
+herkes kendi ortamında derler (`.gitignore`):
 
 ```bash
-npm install
-npm run build
-# veya plugins içindeki dist/*.js dosyaları zaten hazır
+npm install && npm run build
+# veya bun ile (dogurlandi: bun 1.4.0, 63/63 test):
+bun install && bun run build
 ```
 
 `@opencode-ai/plugin` `1.18.21` ile test edildi.
@@ -69,15 +73,16 @@ node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 ```
 opencode-plugins/
 ├── plugins/
-│   ├── opencode-context-saver.ts   # DHS PTC-mode adaptasyonu
-│   ├── opencode-context-saver.js   # derlenmiş
+│   ├── opencode-context-saver.ts   # DHS PTC-mode
 │   ├── opencode-build-tracker.ts
-│   └── opencode-build-tracker.js
+│   ├── opencode-truncation-noticer.ts
+│   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice
+│   └── mcp-bash-tools/             # MCP server (bash_safe/bash_raw)
 ├── docs/
-│   ├── opencode-context-saver.md
-│   └── opencode-build-tracker.md
 ├── examples/
 │   └── opencode.jsonc
+├── scripts/tui-live/               # TASK-112 TUI canlı test
+├── tests/
 ├── package.json
 ├── tsconfig.json
 └── LICENSE
@@ -90,7 +95,7 @@ MIT — `LICENSE` dosyasına bak.
 ## Geliştirme
 
 ```bash
-npm ci               # bağımlılıkları kur
+npm ci               # bağımlılıkları kur (veya: bun install)
 npm run lint         # tsc --noEmit (tip kontrolü)
 npm test             # build + node:test (tests/*.test.mjs)
 ```
