@@ -205,5 +205,26 @@
     "created": "2026-09-05",
     "updated": "2026-09-05",
     "file": "tasks/done/TASK-111-read-truncation-notice.md"
+  },
+  {
+    "id": "TASK-112",
+    "title": "TUI canlı test Aşama 1 — cs-marker tmux scripti",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "tui",
+      "live-test",
+      "context-saver",
+      "tmux",
+      "runtime-first"
+    ],
+    "depends_on": [
+      "TASK-107",
+      "TASK-111"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/done/TASK-112-tui-canli-test-asama1.md"
   }
 ]

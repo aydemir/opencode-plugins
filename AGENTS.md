@@ -278,6 +278,18 @@ mv ~/.config/opencode/opencode.jsonc.bak \
    mesajıdır (plugin'in değil). Plugin prune marker'ı ayrıdır
    (`[... pruned: ...]`).
 
+### TUI canli test proseduru (Asama 1, TASK-112)
+
+```bash
+# Tek senaryo: cs-marker prune marker TUI'de render edildi mi?
+./scripts/tui-live/cs-marker.sh --timeout 180
+# exit: 0=PASS, 1=FAIL (marker yok), 2=INCONCLUSIVE (TUI hazir olmadi), 3=WEAK-PASS
+```
+
+Kurallar: `-S -500` scrollback sart (marker viewport disina tasabilir);
+poll 10sn, toplam 180sn (LLM roundtrip 20-90sn normal); LLM token harcar,
+CI'ye koyma, manuel kos. Detay: `tasks/done/TASK-112-tui-canli-test-asama1.md` (done; Kosum 4 PASS 20sn).
+
 ## [2026-09-05] DECISION: Termux ghost text fix via alternate-screen
 - Issue: #47255 (upstream anomalyco/opencode)
 - Problem: Termux TUI leaves ghost chars when lines shrink (main-screen diff renderer)

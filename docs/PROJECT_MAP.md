@@ -232,6 +232,12 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 |-------|------|
 | `opencode.jsonc` | OpenCode config örneği; `pluginOptions` ile context-saver toggle/ayar |
 
+## Scripts — `scripts/`
+
+| Dosya | Amaç |
+|-------|------|
+| `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
+
 ## Build Artifact — `dist/`
 
 `npx tsc` çıktısı. Repoda kalır (alternatif: `.gitignore` + release
