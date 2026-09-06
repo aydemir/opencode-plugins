@@ -103,6 +103,7 @@ const watch = watchLiveness(child.pid, {
 
 child.on("exit", (code, signal) => {
   watch.stop();
+  if (shuttingDown) return; // sinyal-le kapanis kendi exit kodunu verir
   process.stdout.write(
     `\n[agent] Çıktı: exit=${code} signal=${signal} || ölçüm=${stats.samples} (up=${stats.up}, down=${stats.down}) sonDelta=${stats.lastDelta}\n`,
   );
@@ -110,3 +111,21 @@ child.on("exit", (code, signal) => {
   else if (stallInfo) process.exitCode = 1; // stall algılandı, öldürülmedi
   else process.exitCode = code ?? 0;
 });
+
+// Dış timeout (tool `timeout_ms`) agent'ı öldürürse derleme torunları
+// YETİM kalırdı (kilit tutar, CPU yakar — TASK-115 ailesi). Bu yüzden
+// SIGTERM/SIGINT'te alt ağaç temizlenip CİDDİ exit koduyla çıkılır
+// (143=SIGTERM, 130=SIGINT). --allow-kill'den BAĞIMSIZ: dış katman
+// "bitti" dediyse temizlik zorunlu. (SIGKILL yakalanamaz; dış katman
+// önce SIGTERM atmalı.)
+let shuttingDown = false;
+for (const [sig, code] of [["SIGTERM", 143], ["SIGINT", 130]]) {
+  process.on(sig, () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    watch.stop();
+    process.stdout.write(`\n[agent] ${sig} alındı → alt ağaç temizleniyor (pid=${child.pid}).\n`);
+    treeKill(child.pid, "SIGTERM", () => process.exit(code));
+    setTimeout(() => process.exit(code), 5000).unref();
+  });
+}

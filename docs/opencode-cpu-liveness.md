@@ -41,6 +41,8 @@ yeri + shell-join notu içerir. Tam kullanım `scripts/cpu-liveness-probe/`'da:
 - Exit: `0`=temiz, `1`=stall ama öldürülmedi, `2`=stall+kill (`--allow-kill`),
   `3`=komut hatalı.
 - `onStall` asla otomatik öldürmez (I/O-bekleme false-positive riski).
+- Dış timeout agent'a SIGTERM/SIGINT atarsa alt ağaç tree-kill ile temizlenir
+  (exit 143/130, `--allow-kill`'den bağımsız) — yetim `cargo/rustc` kalmaz.
 - Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ.
 
 ## Kapatma
