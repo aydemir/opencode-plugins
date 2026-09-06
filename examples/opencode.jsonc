@@ -3,7 +3,8 @@
   "plugin": [
     "./plugins/opencode-context-saver.ts",
     "./plugins/opencode-build-tracker.ts",
-    "./plugins/opencode-truncation-noticer.ts"
+    "./plugins/opencode-truncation-noticer.ts",
+    "./plugins/opencode-cpu-liveness.ts"
   ],
   // opencode-context-saver opsiyonel ayarları:
   //   enabled:        false   → tüm prune'ları devre dışı bırakır (debug).
@@ -36,6 +37,9 @@
       "enabled": true,
       "watchTools": ["read"],
       "skipWhenContains": "#no-trunc-notice"
+    },
+    "opencode-cpu-liveness": {
+      "enabled": true
     }
   },
   "mcp": {
