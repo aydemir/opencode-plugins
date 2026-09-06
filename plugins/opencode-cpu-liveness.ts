@@ -9,8 +9,11 @@
  * Bu plugin izleme/öldürme YAPMAZ — işin kendisi
  * `@opencode-plugins/cpu-liveness-probe` paketinde
  * (`scripts/cpu-liveness-probe/`: probe + tree-kill + agent).
- * Tek sorumluluk: uzun derlemede LLM'in `npx cpu-liveness-agent -- ...`
- * yolunu bilmesi (özellikle farklı projelerde AGENTS.md okunmaz).
+ * Tek sorumluluk: uzun derlemede LLM'in agent çalıştırma yolunu bilmesi
+ * (özellikle farklı projelerde AGENTS.md okunmaz). Paket `private:true`
+ * olduğu için `npx` başka projede 404 verir — bu yüzden disclosure'daki
+ * komut `resolveAgentPath()` ile çözülen MUTLAK `node <path>` yoludur
+ * (npx formu sadece yayımlı/global kurulumda fallback).
  *
  * Disable: opencode.jsonc'de `pluginOptions["opencode-cpu-liveness"].enabled: false`
  * (server entry üzerinden gelirse `pluginOptions["opencode-plugins"].enabled: false`
@@ -25,8 +28,9 @@
 
 import type { Plugin } from "@opencode-ai/plugin"
 import {
+  buildCpuLivenessText,
   CPU_LIVENESS_SENTINEL,
-  CPU_LIVENESS_TEXT,
+  resolveAgentPath,
 } from "./lib/cpu-liveness-disclosure.js"
 
 interface CpuLivenessConfig {
@@ -41,12 +45,13 @@ const CpuLivenessPlugin: Plugin = async (_ctx) => {
   const userConfig =
     ((_ctx as { config?: CpuLivenessConfig }).config ?? {}) as CpuLivenessConfig
   const config = { ...DEFAULT_CONFIG, ...userConfig }
+  const text = buildCpuLivenessText(resolveAgentPath())
 
   return {
     "experimental.chat.system.transform": async (_input, output) => {
       if (!config.enabled) return
       if (output.system.some((s) => s.includes(CPU_LIVENESS_SENTINEL))) return
-      output.system.push(CPU_LIVENESS_TEXT)
+      output.system.push(text)
     },
   }
 }

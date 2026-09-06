@@ -32,7 +32,7 @@
       "docs": "docs/opencode-cpu-liveness.md",
       "tests": "tests/cpu-liveness-disclosure.test.mjs",
       "status": "stable",
-      "purpose": "CPU liveness probe script paketini LLM'e deklare eder (disclosure-only); uzun derlemede `npx cpu-liveness-agent -- ...` yolunu bildirir, özellikle AGENTS.md okunmayan farklı projelerde."
+      "purpose": "CPU liveness probe script paketini LLM'e deklare eder (disclosure-only); agent mutlak `node <path>` yolunu bildirir (npx baska projede 404 verir, paket private:true). Ozellikle AGENTS.md okunmayan farkli projelerde."
     }
   ],
   "shared_lib": {
@@ -158,6 +158,11 @@
       "id": "KD-2026-09-06-cpu-liveness",
       "date": "2026-09-06",
       "summary": "TASK-116: cpu-liveness-probe script set (probe+tree-kill+agent). Linux /proc/<pid>/stat ile canli test edildi (busy->up trend exit0, stalled sleep + --allow-kill -> SIGTERM exit2, --allow-kill siz -> uyari exit1). onStall otomatik oldurmez: I/O-bekleme false-positive riski; kill icin actik --allow-kill bayragi + gerekce logu. macos/win32 okuculari yazildi, TEST EDILMEDI (olas). Plugin degil, operasyonel script."
+    },
+    {
+      "id": "KD-2026-09-06-cl-abs-path",
+      "date": "2026-09-06",
+      "summary": "rgsx vakasi: `npx cpu-liveness-agent` baska projede 404 (paket private:true, npm publish auth bekliyor). Disclosure artik npx vaat etmiyor; plugin `resolveAgentPath()` (import.meta.url) ile agent mutlak yolunu cozer ve `node <path> -- ...` bildirir. Fallback statik npx metni korunur."
     }
   ],
   "mcp_servers": [

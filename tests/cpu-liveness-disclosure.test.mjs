@@ -7,8 +7,10 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
+  buildCpuLivenessText,
   CPU_LIVENESS_SENTINEL,
   CPU_LIVENESS_TEXT,
+  resolveAgentPath,
 } from "../dist/plugins/lib/cpu-liveness-disclosure.js"
 import CpuLivenessPlugin from "../dist/plugins/opencode-cpu-liveness.js"
 
@@ -27,6 +29,28 @@ test("text is self-sufficient: example + flag placement + shell-join note", () =
   assert.ok(CPU_LIVENESS_TEXT.includes("npm run build"))
   assert.ok(CPU_LIVENESS_TEXT.includes("BEFORE --"))
   assert.ok(CPU_LIVENESS_TEXT.includes("/bin/bash -c"))
+})
+
+test("resolveAgentPath: finds real agent script (no npx/registry needed)", () => {
+  const p = resolveAgentPath()
+  assert.ok(p, "agent path must resolve inside repo")
+  assert.ok(p.endsWith("cpu-liveness-agent.js"))
+})
+
+test("buildCpuLivenessText: absolute node path when resolved, npx fallback when null", () => {
+  const withPath = buildCpuLivenessText("/x/cpu-liveness-agent.js")
+  assert.ok(withPath.includes("node /x/cpu-liveness-agent.js --"))
+  assert.ok(!withPath.includes("npx cpu-liveness-agent"))
+  assert.equal(buildCpuLivenessText(null), CPU_LIVENESS_TEXT)
+})
+
+test("transform hook: pushes absolute-path text (cross-project safe)", async () => {
+  const instance = await CpuLivenessPlugin({ directory: "/tmp" }, {})
+  const output = { system: [] }
+  await instance["experimental.chat.system.transform"]({}, output)
+  assert.equal(output.system.length, 1)
+  assert.ok(output.system[0].includes("cpu-liveness-agent.js"))
+  assert.ok(!output.system[0].includes("npx cpu-liveness-agent"))
 })
 
 test("transform hook: pushes disclosure once (idempotent)", async () => {

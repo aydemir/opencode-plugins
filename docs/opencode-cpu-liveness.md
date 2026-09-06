@@ -8,16 +8,20 @@ system prompt'a tek satırlık kaçış notu enjekte edilir, işin kendisi yapı
 
 `cpu-liveness-probe` bir **operasyonel script paketi**, plugin değil
 (TASK-116 kararı). AGENTS.md bu repoda okunur ama **farklı projede
-kullananın LLM'i** `npx cpu-liveness-agent -- ...` yolunu bilmez —
-paket `node_modules`'ta durur, kimse çağırmaz.
+kullananın LLM'i** agent yolunu bilmez. Paket `private:true` olduğu için
+registry'de YOK — `npx cpu-liveness-agent` başka projede **404 verir**
+(2026-09-06 rgsx vakası). npm publish `npm adduser` bekliyor (KD-npm-publish).
 
 ## Çözüm
 
 `opencode-cpu-liveness` (`cl`) — `experimental.chat.system.transform`
-hook'unda oturum başına bir kez push'lar (sentinel ile idempotent):
+hook'unda oturum başına bir kez push'lar (sentinel ile idempotent).
+Komut `resolveAgentPath()` (`import.meta.url` → `../../scripts/...`)
+ile çözülen **mutlak `node <path>`** yoludur — registry/`npx`/workspace'e
+değmeden her projede çalışır (`npx` formu sadece fallback):
 
 ```
-[cpu-liveness] Long builds: `npx cpu-liveness-agent -- <build cmd>` ...
+[cpu-liveness] Long builds: `node <abs-path>/cpu-liveness-agent.js -- <build cmd>` ...
 ```
 
 Kısa tutulur (~110 token) ama tool-çağrısız çalışabilir: örnek + flag
@@ -27,9 +31,11 @@ yeri + shell-join notu içerir. Tam kullanım `scripts/cpu-liveness-probe/`'da:
 
 ## Davranış özeti (disclosure'ın işaret ettiği)
 
-- `npx cpu-liveness-agent -- <build cmd>` (örn. `npx cpu-liveness-agent -- npm run build`)
+- `node <abs-path>/cpu-liveness-agent.js -- <build cmd>`
+  (disclosure'daki tam yol kopyalanır; örn. tek çekirdek cargo:
+  `node <path> -- taskset -c 0 cargo build --jobs 1`)
   — pid + canlı torunların CPU toplamını izler (includeTree default true).
-- Flag'ler `--`'den ÖNCE: `npx cpu-liveness-agent --intervalMs=1000 --stallThreshold=10 --allow-kill -- <cmd>`
+- Flag'ler `--`'den ÖNCE: `node <path> --intervalMs=1000 --stallThreshold=10 --allow-kill -- <cmd>`
   (default: interval 2000ms, stall eşiği 3 ardışık delta=0).
 - Komut join'lenip `/bin/bash -c` ile koşulur — boşluklu argümanları tırnakla.
 - Exit: `0`=temiz, `1`=stall ama öldürülmedi, `2`=stall+kill (`--allow-kill`),
