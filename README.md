@@ -19,6 +19,18 @@ Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-trac
 
 ## Kurulum
 
+### 0) Seçenek C — `opencode plugin` (önerilen)
+
+```bash
+opencode plugin -g opencode-plugins
+```
+
+Tek komut paketi kurar ve config'i günceller; üç plugin de
+`exports["./server"]` üzerinden yüklenir. Yapılandırma:
+`pluginOptions["opencode-plugins"]` (üçüne ortak; `enabled:false`
+üçünü birden kapatır). MCP server (`bash_safe`/`bash_raw`) bu akışa
+dahil değildir — `mcp` bloğunu `examples/opencode.jsonc`'den kopyala.
+
 ### 1) Seçenek A — Git submodule / kopyala
 
 ```bash
@@ -27,6 +39,12 @@ git clone https://github.com/<org>/opencode-plugins.git
 # plugins/ dizinini bütün olarak kopyala:
 cp -r opencode-plugins/plugins ~/.config/opencode/plugins
 ```
+
+> ⚠️ Çift-yükleme tuzağı: opencode `~/.config/opencode/plugins/*.ts`
+> dosyalarını OTOMATİK tarar ve config'deki `plugin` listesine EKLER.
+> Repo kopyası + eski kopya aynı anda durursa hook'lar çift çalışır
+> (2026-09-05 vakası: 6 spec → 5 instance). Ya Seçenek C'yi kullan ya
+> da eski kopyaları sil, ikisini karıştırma.
 
 ### 2) Seçenek B — Doğrudan opencode.jsonc ile
 
@@ -52,7 +70,7 @@ herkes kendi ortamında derler (`.gitignore`):
 
 ```bash
 npm install && npm run build
-# veya bun ile (dogurlandi: bun 1.4.0, 63/63 test):
+# veya bun ile (dogurlandi: bun 1.4.0, 66/66 test):
 bun install && bun run build
 ```
 
@@ -76,6 +94,7 @@ opencode-plugins/
 │   ├── opencode-context-saver.ts   # DHS PTC-mode
 │   ├── opencode-build-tracker.ts
 │   ├── opencode-truncation-noticer.ts
+│   ├── server.ts                     # npm paketi entry (exports["./server"], TASK-114)
 │   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice
 │   └── mcp-bash-tools/             # MCP server (bash_safe/bash_raw)
 ├── docs/

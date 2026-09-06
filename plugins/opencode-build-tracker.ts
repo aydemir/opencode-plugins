@@ -61,7 +61,7 @@ interface ToolAfterOutput {
   metadata?: Record<string, unknown>
 }
 
-export const BuildHooksPlugin: Plugin = async (input, options?: Record<string, unknown>) => {
+const BuildHooksPlugin: Plugin = async (input, options?: Record<string, unknown>) => {
   const config: BuildConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
   const sess = createSession()
   const pendingCalls = new Map<string, number>()

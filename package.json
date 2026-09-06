@@ -1,9 +1,12 @@
 {
   "name": "opencode-plugins",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Resmi olmayan OpenCode eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode), opencode-build-tracker ve opencode-truncation-noticer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aydemir/opencode-plugins.git"
+  },
   "workspaces": [
     "plugins/mcp-bash-tools"
   ],
@@ -39,6 +42,7 @@
     "node": ">=18"
   },
   "exports": {
+    "./server": "./dist/plugins/server.js",
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
     "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
     "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js"

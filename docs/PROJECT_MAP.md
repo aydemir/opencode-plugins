@@ -86,6 +86,24 @@ Tamamlayıcı mimari:
 - `opencode-mcp-bash-tools` → bash_safe (marker'lı) + bash_raw (ham)
 - **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
 
+### `plugins/server.ts` (TASK-114)
+
+**Amaç:** npm paketi tek server entrypoint'i (`exports["./server"]` →
+`dist/plugins/server.js`). `opencode plugin opencode-plugins` manifest
+kontrolü (`manifest_no_targets`) bu entry'yi ister; boot loader
+(`getLegacyPlugins`) modülün TÜM export'larını iterate edip her
+function'ı ayrı plugin instance yapar.
+
+Public API (yalnızca function — string/sabit YOK):
+- `contextSaver` — `opencode-context-saver.ts` factory re-export
+- `buildTracker` — `opencode-build-tracker.ts` factory re-export
+- `truncationNoticer` — `opencode-truncation-noticer.ts` factory re-export
+
+Options: üç instance DA aynı spec options objesini alır
+(`pluginOptions["opencode-plugins"]`). `enabled:false` üçünü birden
+kapatır; `skipWhenContains` iki katmana da uygulanır. Test:
+`tests/server-entry.test.mjs` (entry shape + instantiate).
+
 ## Paylaşılan Kütüphane — `plugins/lib/`
 
 ### `plugins/lib/prune.ts` (302 satır)

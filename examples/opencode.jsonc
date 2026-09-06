@@ -48,7 +48,7 @@
     //   npm run build   (veya: bun run build)
     "opencode-mcp-bash-tools": {
       "type": "local",
-      "command": ["node", "plugins/mcp-bash-tools/dist/server.js"],
+      "command": ["node", "./dist/plugins/mcp-bash-tools/src/server.js"],
       "enabled": true
     }
   }

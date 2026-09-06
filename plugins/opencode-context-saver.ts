@@ -151,7 +151,7 @@ function formatCompactLog(entries: ToolLogEntry[]): string {
  * Per-call sayaç doldurma: `disableForCalls` / `disable_for_calls`
  * pozitif tamsayı (veya sayısal string) ise döndür, yoksa undefined.
  */
-export const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, unknown>) => {
+const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, unknown>) => {
   const config = resolveConfig((options ?? {}) as Partial<CompactConfig>)
   const logs: ToolLogEntry[] = []
   const startTimes = new Map<string, number>()

@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { codePointLength } from "../dist/plugins/lib/prune.js"
-import { ToolCompactPlugin } from "../dist/plugins/opencode-context-saver.js"
+import ToolCompactPlugin from "../dist/plugins/opencode-context-saver.js"
 
 const fakeClient = () => ({
   tui: { showToast: async () => {} },

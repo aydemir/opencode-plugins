@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { BuildHooksPlugin } from "../dist/plugins/opencode-build-tracker.js"
+import BuildHooksPlugin from "../dist/plugins/opencode-build-tracker.js"
 
 function captureConsole() {
   const logs = []

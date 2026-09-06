@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "OpenCode için eklenti koleksiyonu — opencode-context-saver (DHS PTC-mode), opencode-build-tracker, opencode-truncation-noticer.",
   "type": "module",
-  "private": true,
   "plugins": [
     {
       "id": "opencode-context-saver",
@@ -75,6 +74,13 @@
   "examples": [
     "examples/opencode.jsonc"
   ],
+  "distribution": {
+    "npm": "opencode-plugins",
+    "version": "0.1.0",
+    "server_entry": "plugins/server.ts (exports[\"./server\"] -> dist/plugins/server.js)",
+    "install": "opencode plugin -g opencode-plugins",
+    "note": "Tek paket üç plugin instance yükler (contextSaver, buildTracker, truncationNoticer). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
+  },
   "key_decisions": [
     {
       "id": "DECISION-001",
@@ -125,6 +131,11 @@
       "id": "KD-2026-09-05-no-dist-bun",
       "date": "2026-09-05",
       "summary": "TASK-113: dist repoda yok (zaten gitignore), herkes npm/bun ile derler. bun 1.4.0 izole dogrulandi (install+build+63/63). workspaces bogus glob temizlendi. Release (tag/CHANGELOG/publish) ayri karar."
+    },
+    {
+      "id": "KD-2026-09-05-npm-publish",
+      "date": "2026-09-05",
+      "summary": "TASK-114: `opencode plugin <pkg>` akışı için npm paketi. Sözleşme (1.18.29 binary): exports[\"./server\"] zorunlu, modül SADECE function export etmeli (getLegacyPlugins iterate). Yeni plugins/server.ts barrel üç factory'yi re-export eder (66/66 test). `private:true` kaldırıldı, repository eklendi. npm adı `opencode-plugins` (müsait). Gerçek publish npm auth bekliyor; yerel verdaccio + izole HOME ile uçtan uca doğrulandı."
     }
   ],
   "mcp_servers": [

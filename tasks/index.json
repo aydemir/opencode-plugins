@@ -246,5 +246,24 @@
     "created": "2026-09-05",
     "updated": "2026-09-05",
     "file": "tasks/done/TASK-113-docs-no-dist-bun.md"
+  },
+  {
+    "id": "TASK-114",
+    "title": "npm paketi + `opencode plugin` kurulum akışı",
+    "status": "in-progress",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "release",
+      "npm",
+      "distribution",
+      "server-entry"
+    ],
+    "depends_on": [
+      "TASK-113"
+    ],
+    "created": "2026-09-05",
+    "updated": "2026-09-05",
+    "file": "tasks/todo/TASK-114-npm-publish-opencode-plugin.md"
   }
 ]
