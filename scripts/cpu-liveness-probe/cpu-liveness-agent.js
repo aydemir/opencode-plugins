@@ -66,7 +66,8 @@ let stallInfo = null;
 const watch = watchLiveness(child.pid, {
   intervalMs,
   stallThreshold,
-  includeTree: true, // derleme = ağaç; tek PID npm'de flat kalır (false stall)
+  includeTree: true, // probe default'u zaten true; burada AÇIK yazıldı ki karar
+  // çağrı noktasında da keşfedilebilir olsun (sessiz default'a güvenme).
   onProgress: (info) => {
     if (info.up === null) return; // process bitti, aşağıda ele alınır
     stats.samples += 1;

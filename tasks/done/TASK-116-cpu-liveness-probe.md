@@ -84,6 +84,8 @@ dizini.
 - [x] `npx tsc --noEmit` temiz
 - [x] `npm test` EXIT=0, 74/74 pass (build dahil; +2 tree-mod testi)
 - [x] Gerçek derleme tree-modda: up trend, uyarı yok, exit 0 (Koşum 4)
+- [x] Tree-mod probe default'u: yeni araç kod değişmeden doğru izlenir; single
+  sadece explicit opt-out (genelleme kapatması)
 - [x] Kalıntı yok (`ps` kontrolü sleep/node kalıntısı bırakmadı)
 
 ## Notlar / Kararlar
@@ -125,8 +127,7 @@ dizini.
   Güvenlik tuttu (`--allow-kill` yok → öldürme yok) ama uyarı gürültüsü vardı.
 - Kök neden: derleme araçları işi alt process'te yapar (npm→tsc,
   cargo→rustc, make→cc). Fix: `readTreeCpuTime` (pid + canlı torunlar toplamı)
-  + `watchLiveness includeTree` opsiyonu + agent `includeTree: true`
-  (default false = geriye uyumlu tek PID).
+  + `watchLiveness includeTree` opsiyonu + agent `includeTree: true`.
 - Tekrar (tree modu): 9 örnek, cpuTime 1→90 monoton artıyor, 8 up / 1 down,
   **stall uyarısı YOK**, derleme exit=0, agent **EXIT=0**. **PASS.**
 - Not: son örnekte delta=-73 (tsc bitip torunlar ölünce toplam düştü) —
@@ -135,6 +136,16 @@ dizini.
 - Hüküm: araç artık gerçek derlemede doğru çalışıyor; tek PID modu build
   izlemeye uygun DEĞİL (testle kilitlendi: aynı topolojide single=stall,
   tree=up). **PASS.**
+- `[2026-09-06] GENELLEME KAPATMASI: includeTree kararı önce agent'ta hardcode
+  + probe default'unda false idi — yeni derleme aracı (go build vb.) aynı
+  false-stall'u sıfırdan yeniden keşfetmek zorundaydı (bilgi sadece bu
+  nottaydı). Araç-listesi-if'i tuzağına düşülmeden kapatıldı: probe default'u
+  TRUE yapıldı (yapraksız process'te ağaç toplamı = tek PID okuması, kimse
+  cezalanmaz); tek PID artık yalnızca explicit opt-out
+  (includeTree: false). Politika probe dosya başında DECLARE edildi (İZLEME
+  POLİTİKASI bloğu), agent çağrı noktasında açık yazar. Yeni araç kod
+  değişmeden doğru izlenir; LLM/tüketici kararı dosyadan okuyup seçebilir.
+  SUPERSEDES: none`
 
 ## Koşum 1 (2026-09-06, busy — CPU tüketen process)
 

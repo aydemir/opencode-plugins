@@ -145,12 +145,14 @@ test("watchLiveness includeTree: torun çalışırken stall YOK; tek PID modda s
   w1.stop();
   await new Promise((r) => treeKill(c1.pid, "SIGKILL", r));
 
-  // Tek PID modu (default): aynı topolojide stall beklenir (kök bash boş bekler).
+  // Tek PID modu (EXPLICIT opt-out — default artık tree): aynı topolojide
+  // stall beklenir (kök bash boş bekler).
   const c2 = mk();
   let singleStall = false;
   const w2 = watchLiveness(c2.pid, {
     intervalMs: 400,
     stallThreshold: 3,
+    includeTree: false,
     onProgress: () => {},
     onStall: () => {
       singleStall = true;

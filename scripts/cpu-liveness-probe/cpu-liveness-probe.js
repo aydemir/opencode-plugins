@@ -18,6 +18,16 @@
 //   Windows : `Get-Process -Id <pid>.TotalProcessorTime` PowerShell —
 //             kod yazıldı, TEST EDİLMEDİ, çağrı maliyeti yüksek.
 // Doğrulanmamış platformlarda sonuç "olası", asla "kesin" olarak ele alınmalı.
+//
+// İZLEME POLİTİKASI (declare — bu dosya kararın tek sahibi):
+//   Default = AĞAÇ modu (includeTree: true): pid + canlı torunların CPU toplamı.
+//   Gerekçe: derleme araçları işi alt process'te yapar (npm→tsc, cargo→rustc,
+//   make→cc, go→compile); tek PID izleme SAĞLIKLI derlemede bile false-stall
+//   üretir (Koşum 4 kanıtı). Araç-listesi-if'i YOKTUR: yeni bir derleme aracı
+//   (go build vb.) kod değişmeden doğru izlenir.
+//   Kökün KENDİ CPU'sunu yalnız izlemek istiyorsan includeTree: false'u AÇIKÇA
+//   ver (opt-out). Sessiz default tek-PID yoktur — unutkanlık false-stall'a
+//   değil, doğru davranışa düşer.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -136,9 +146,10 @@ export function readTreeCpuTime(pid) {
  * delta=0 olayları stall sayılır. Çağrı sırasına I/O gecikmesi girerse
  * takvim süresi ≠ intervalMs olabilir; yine de delta=0 takip edilir.
  *
- * `includeTree: true` → tek PID yerine pid + canlı torunların CPU toplamı
- * (readTreeCpuTime) izlenir. Derleme komutları için DOĞRU mod budur: işi
- * yapan torunlardır (npm→tsc). Default false = tek PID (geriye uyumlu).
+ * `includeTree` (default TRUE) → tek PID yerine pid + canlı torunların CPU
+ * toplamı (readTreeCpuTime) izlenir. `false` yalnızca kökün kendi CPU'sunu
+ * istediğinde verilir (opt-out). Yapraksız process'te ağaç toplamı = tek PID
+ * okumasıdır, yani default kimseyi cezalandırmaz.
  */
 export function watchLiveness(pid, opts = {}) {
   const {
@@ -147,7 +158,7 @@ export function watchLiveness(pid, opts = {}) {
     onProgress = () => {},
     onStall = () => {},
     onChange = () => {},
-    includeTree = false,
+    includeTree = true,
   } = opts;
   const read = includeTree ? readTreeCpuTime : readCpuTime;
 
