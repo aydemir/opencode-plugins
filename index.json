@@ -32,7 +32,9 @@
     "modules": [
       {
         "path": "plugins/lib/prune.ts",
-        "used_by": ["opencode-context-saver"],
+        "used_by": [
+          "opencode-context-saver"
+        ],
         "exports": [
           "PRUNE_MARKER",
           "codePointLength",
@@ -47,7 +49,9 @@
       },
       {
         "path": "plugins/lib/truncation-notice.ts",
-        "used_by": ["opencode-truncation-noticer"],
+        "used_by": [
+          "opencode-truncation-noticer"
+        ],
         "exports": [
           "MARKER_SENTINEL",
           "DISCLOSURE_SENTINEL",
@@ -141,6 +145,11 @@
       "id": "KD-2026-09-06-exec-shell",
       "date": "2026-09-06",
       "summary": "TASK-115: exec timeout orphan probe — shell: /bin/bash kritik (dash torunu orphan bırakıyor, sh→ORPHAN 2/2 vs bash→TEMİZ 2/2). runBash katmanı temiz. Regresyon bekçisi scripts/timeout-kill-probe (A guard/B diferansiyel/C daemonize). Keşif branchi silindi."
+    },
+    {
+      "id": "KD-2026-09-06-cpu-liveness",
+      "date": "2026-09-06",
+      "summary": "TASK-116: cpu-liveness-probe script set (probe+tree-kill+agent). Linux /proc/<pid>/stat ile canli test edildi (busy->up trend exit0, stalled sleep + --allow-kill -> SIGTERM exit2, --allow-kill siz -> uyari exit1). onStall otomatik oldurmez: I/O-bekleme false-positive riski; kill icin actik --allow-kill bayragi + gerekce logu. macos/win32 okuculari yazildi, TEST EDILMEDI (olas). Plugin degil, operasyonel script."
     }
   ],
   "mcp_servers": [

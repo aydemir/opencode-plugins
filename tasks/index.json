@@ -286,5 +286,25 @@
     "created": "2026-09-06",
     "updated": "2026-09-06",
     "file": "tasks/done/TASK-115-exec-shell-orphan-probe.md"
+  },
+  {
+    "id": "TASK-116",
+    "title": "cpu-liveness-probe — build process CPU izleme (busy/stall ayrımı + tree-kill entegrasyonu)",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "liveness",
+      "build",
+      "live-test",
+      "cpu-probe",
+      "tree-kill"
+    ],
+    "depends_on": [
+      "TASK-115"
+    ],
+    "created": "2026-09-06",
+    "updated": "2026-09-06",
+    "file": "tasks/done/TASK-116-cpu-liveness-probe.md"
   }
 ]
