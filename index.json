@@ -136,6 +136,11 @@
       "id": "KD-2026-09-05-npm-publish",
       "date": "2026-09-05",
       "summary": "TASK-114: `opencode plugin <pkg>` akışı için npm paketi. Sözleşme (1.18.29 binary): exports[\"./server\"] zorunlu, modül SADECE function export etmeli (getLegacyPlugins iterate). Yeni plugins/server.ts barrel üç factory'yi re-export eder (66/66 test). `private:true` kaldırıldı, repository eklendi. npm adı `opencode-plugins` (müsait). Gerçek publish npm auth bekliyor; yerel verdaccio + izole HOME ile uçtan uca doğrulandı."
+    },
+    {
+      "id": "KD-2026-09-06-exec-shell",
+      "date": "2026-09-06",
+      "summary": "TASK-115: exec timeout orphan probe — shell: /bin/bash kritik (dash torunu orphan bırakıyor, sh→ORPHAN 2/2 vs bash→TEMİZ 2/2). runBash katmanı temiz. Regresyon bekçisi scripts/timeout-kill-probe (A guard/B diferansiyel/C daemonize). Keşif branchi silindi."
     }
   ],
   "mcp_servers": [
@@ -149,9 +154,10 @@
       "related_tasks": [
         "TASK-109",
         "TASK-110",
-        "TASK-111"
+        "TASK-111",
+        "TASK-115"
       ],
-      "last_live_test": "2026-09-05"
+      "last_live_test": "2026-09-06"
     }
   ]
 }

@@ -265,5 +265,26 @@
     "created": "2026-09-05",
     "updated": "2026-09-05",
     "file": "tasks/todo/TASK-114-npm-publish-opencode-plugin.md"
+  },
+  {
+    "id": "TASK-115",
+    "title": "exec timeout orphan probe — /bin/bash şartı + regresyon bekçisi",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "mcp-bash-tools",
+      "exec",
+      "live-test",
+      "timeout",
+      "runtime-first"
+    ],
+    "depends_on": [
+      "TASK-109",
+      "TASK-110"
+    ],
+    "created": "2026-09-06",
+    "updated": "2026-09-06",
+    "file": "tasks/done/TASK-115-exec-shell-orphan-probe.md"
   }
 ]

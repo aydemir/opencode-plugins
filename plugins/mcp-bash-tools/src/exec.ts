@@ -36,6 +36,11 @@ export async function runBash(
     const { stdout, stderr } = await execAsync(command, {
       timeout: timeoutMs,
       maxBuffer: 50 * 1024 * 1024, // 50 MB — sonra prune/limit uygular
+      // shell KRİTİK: /bin/bash şart, /bin/sh (dash) ile değiştirme.
+      // Timeout'ta dash sadece shell'i öldürüp torun process'i orphan
+      // bırakıyor (PPID 1, CPU'da yaşar); bash torunu da temizliyor.
+      // Canlı kanıt (2026-09-06): scripts/timeout-kill-probe — aynı komutta
+      // sh→ORPHAN 2/2, bash→TEMİZ 2/2.
       shell: "/bin/bash",
       windowsHide: true,
     })
