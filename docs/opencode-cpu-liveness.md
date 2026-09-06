@@ -45,6 +45,15 @@ yeri + shell-join notu içerir. Tam kullanım `scripts/cpu-liveness-probe/`'da:
   (exit 143/130, `--allow-kill`'den bağımsız) — yetim `cargo/rustc` kalmaz.
 - Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ.
 
+## Doktrin: tavan vs tripwire (KD-2026-09-06-timeout-doctrine)
+
+- HÜKÜM (asıldı/asılmadı): sadece probe verir — CPU kanıtı. Duvar saati
+  asla hüküm vermez.
+- ÖLDÜRME yetkisi: sadece `--allow-kill` — çağıran "bu workload CPU-bound,
+  tripwire'a güven" demiş olur. Beyan yoksa exit 1 + uyarı doğru duruştur.
+- Dış timeout akılsız TAVAN-bütçedir: geniş tutulur (beklenenin katları),
+  patlaması "bütçe bitti, gel bak" sinyalidir, "asıldı" hükmü değil.
+
 ## Kapatma
 
 - Tek plugin: `pluginOptions["opencode-cpu-liveness"].enabled: false`
