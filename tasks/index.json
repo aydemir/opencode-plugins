@@ -328,5 +328,26 @@
     "created": "2026-09-06",
     "updated": "2026-09-06",
     "file": "tasks/done/TASK-117-cpu-liveness-bes-madde.md"
+  },
+  {
+    "id": "TASK-118",
+    "title": "MCP penceresi vs tavan: tek-cekirdek tam derleme ortam kisiti bulgusu (3 kosum)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "linux",
+    "labels": [
+      "liveness",
+      "mcp-window",
+      "budget",
+      "single-core",
+      "live-test",
+      "oracle-driven"
+    ],
+    "depends_on": [
+      "TASK-117"
+    ],
+    "created": "2026-09-06",
+    "updated": "2026-09-06",
+    "file": "tasks/done/TASK-118-mcp-pencere-tavan-siniri.md"
   }
 ]
