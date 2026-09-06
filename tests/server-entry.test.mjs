@@ -7,10 +7,11 @@ import * as serverEntry from "../dist/plugins/server.js"
 // function olmalı (getLegacyPlugins Object.values iterate eder,
 // function olmayan tek export tüm paketi düşürür).
 
-test("server entry: exposes exactly the three plugin factories", () => {
+test("server entry: exposes exactly the four plugin factories", () => {
   assert.deepEqual(Object.keys(serverEntry).sort(), [
     "buildTracker",
     "contextSaver",
+    "cpuLiveness",
     "truncationNoticer",
   ])
   for (const [name, value] of Object.entries(serverEntry)) {
@@ -25,7 +26,15 @@ test("server entry: every factory instantiates with hooks", async () => {
       Object.keys(instance).length > 0,
       `${name} instance must expose hooks`,
     )
-    assert.equal(typeof (instance.dispose ?? instance["tool.execute.after"]), "function")
+    assert.equal(
+      typeof (
+        instance.dispose ??
+        instance["tool.execute.after"] ??
+        instance["experimental.chat.system.transform"]
+      ),
+      "function",
+      `${name} must expose a callable hook`,
+    )
   }
 })
 
@@ -36,4 +45,6 @@ test("server entry: shared options object reaches all factories", async () => {
   assert.equal(typeof bt["tool.execute.after"], "function")
   const tn = await serverEntry.truncationNoticer({ directory: "/tmp" }, {})
   assert.equal(typeof tn["tool.execute.after"], "function")
+  const cl = await serverEntry.cpuLiveness({ directory: "/tmp" }, {})
+  assert.equal(typeof cl["experimental.chat.system.transform"], "function")
 })

@@ -8,7 +8,8 @@
     "url": "https://github.com/aydemir/opencode-plugins.git"
   },
   "workspaces": [
-    "plugins/mcp-bash-tools"
+    "plugins/mcp-bash-tools",
+    "scripts/cpu-liveness-probe"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
@@ -45,7 +46,8 @@
     "./server": "./dist/plugins/server.js",
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
     "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
-    "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js"
+    "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js",
+    "./opencode-cpu-liveness": "./dist/plugins/opencode-cpu-liveness.js"
   },
   "files": [
     "dist",

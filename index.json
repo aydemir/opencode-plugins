@@ -25,6 +25,14 @@
       "tests": "tests/truncation-noticer.test.mjs",
       "status": "stable",
       "purpose": "Native read tool sessiz kırpmasını 'devamı var' marker'ı ile bildirir; küçük context'li modeller için yarım içerik üzerinden karar vermeyi engeller."
+    },
+    {
+      "id": "opencode-cpu-liveness",
+      "file": "plugins/opencode-cpu-liveness.ts",
+      "docs": "docs/opencode-cpu-liveness.md",
+      "tests": "tests/cpu-liveness-disclosure.test.mjs",
+      "status": "stable",
+      "purpose": "CPU liveness probe script paketini LLM'e deklare eder (disclosure-only); uzun derlemede `npx cpu-liveness-agent -- ...` yolunu bildirir, özellikle AGENTS.md okunmayan farklı projelerde."
     }
   ],
   "shared_lib": {
@@ -83,7 +91,7 @@
     "version": "0.1.0",
     "server_entry": "plugins/server.ts (exports[\"./server\"] -> dist/plugins/server.js)",
     "install": "opencode plugin -g opencode-plugins",
-    "note": "Tek paket üç plugin instance yükler (contextSaver, buildTracker, truncationNoticer). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
+      "note": "Tek paket dört plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
   },
   "key_decisions": [
     {

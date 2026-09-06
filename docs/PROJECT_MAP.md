@@ -85,6 +85,24 @@ Tamamlayıcı mimari:
 - `opencode-context-saver` → prune (kırpma)
 - `opencode-mcp-bash-tools` → bash_safe (marker'lı) + bash_raw (ham)
 - **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
+- **`opencode-cpu-liveness` → uzun derlemede `cpu-liveness-agent` yolunu deklare eder**
+
+### `plugins/opencode-cpu-liveness.ts` (disclosure-only)
+
+**Amaç:** CPU liveness probe script paketini LLM'e deklare eder.
+`experimental.chat.system.transform` hook'unda oturum başına bir kez
+`[cpu-liveness]` disclosure push'lar (sentinel ile idempotent).
+İzleme/öldürme YAPMAZ — iş `@opencode-plugins/cpu-liveness-probe`
+paketinde (`scripts/cpu-liveness-probe/`).
+
+Public API:
+- `default` — `CpuLivenessPlugin`
+
+Sabitler (`plugins/lib/cpu-liveness-disclosure.ts`):
+- `CPU_LIVENESS_SENTINEL`, `CPU_LIVENESS_TEXT`
+
+Config: `enabled` (default `true`). Test: `tests/cpu-liveness-disclosure.test.mjs`.
+Detay: `docs/opencode-cpu-liveness.md`.
 
 ### `plugins/server.ts` (TASK-114)
 
@@ -98,9 +116,10 @@ Public API (yalnızca function — string/sabit YOK):
 - `contextSaver` — `opencode-context-saver.ts` factory re-export
 - `buildTracker` — `opencode-build-tracker.ts` factory re-export
 - `truncationNoticer` — `opencode-truncation-noticer.ts` factory re-export
+- `cpuLiveness` — `opencode-cpu-liveness.ts` factory re-export
 
-Options: üç instance DA aynı spec options objesini alır
-(`pluginOptions["opencode-plugins"]`). `enabled:false` üçünü birden
+Options: dört instance DA aynı spec options objesini alır
+(`pluginOptions["opencode-plugins"]`). `enabled:false` dördünü birden
 kapatır; `skipWhenContains` iki katmana da uygulanır. Test:
 `tests/server-entry.test.mjs` (entry shape + instantiate).
 
@@ -212,6 +231,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 |-------|------|
 | `opencode-context-saver.md` | Plugin detayları, marker formatı, escape mekanizması, benchmark tablosu (97.5%) |
 | `opencode-build-tracker.md` | Build plugin dokümantasyonu |
+| `opencode-cpu-liveness.md` | CPU liveness disclosure plugin + script paketi kullanım özeti |
 | `plugin-test.md` | Manuel test rehberi |
 | `tool-calls.json` | Test sırasında üretilen örnek tool call dump |
 | `PROJECT_MAP.md` | **Bu dosya** |
@@ -255,6 +275,8 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | Dosya | Amaç |
 |-------|------|
 | `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
+| `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`). Paket import: `@opencode-plugins/cpu-liveness-probe`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
+| `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
 
 ## Build Artifact — `dist/`
 
