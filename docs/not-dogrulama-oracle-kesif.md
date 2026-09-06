@@ -70,6 +70,27 @@ arasında fark olabiliyor ve bu ancak bağımsız bir yöntemle yakalanıyor:
 | `tool/result` "marker yok" | `capture-pane` ile viewport okuma | Marker varmış, collapsed arkasında (TASK-112) |
 | `exec` "timeout, KILLED" | `ps` ile PID takibi | Torun orphan yaşıyormuş (TASK-115) |
 
+## 6. İlke: hüküm kanıta, yetki beyana, tavan bütçeye aittir
+
+2026-09-06 rgsx tartışmasından (KD-2026-09-06-timeout-doctrine) —
+ilerideki her "dış limit mi koymalıyım" sorusunun referans cevabı:
+
+- **Hüküm** (asıldı/asılmadı): sadece kanıt üreten katman verir. cpu-liveness
+  vakasında CPU-zamanı probe'u. Duvar saati hüküm veremez — yavaş ile
+  asılıyı ayırt edemez; zaman-tabanlı tahminin kanıt-tabanlı hükmün yerine
+  geçmesi yasaktır.
+- **Yetki** (öldür/durdur): sadece açık beyan verir. Probe workload'un
+  CPU-bound olduğunu bilemez (indiren bekleme ile kopuk ağ ikisi de
+  `delta=0`); `--allow-kill` bu semantik beyandır. Beyan yoksa uyar + bekle
+  (exit 1) doğru duruştur, eksiklik değil.
+- **Tavan** (dış timeout): akılsız bütçedir — geniş tutulur, patlaması
+  "bütçe bitti, gel bak" sinyalidir, hüküm değil. Kaldırılamaz: probe'un kör
+  noktası var (CPU yakan kaçak hep `delta>0` üretir) + harness sonlu sayı
+  ister + bekleyen build değil turdur.
+
+2. ve 5. maddenin kategorisine girer: zayıf oracle gibi burada da "kimin,
+neye dayanarak karar verdiği" sınırlandırılıyor.
+
 ## Revizyon kaydı (2026-09-06)
 
 - Başlık teze çevrildi; 4. maddenin kapanış paragrafı başlığa taşındı.
@@ -79,3 +100,5 @@ arasında fark olabiliyor ve bu ancak bağımsız bir yöntemle yakalanıyor:
 - Madde 4: orphan≠zombie ayrımı, mekanizmanın gözlem-düzeyi çerçevesi,
   process-group kill adı + uygulanmama gerekçesi, daemonize ayrı cümlesi.
 - Madde 5 (ilke + kanıt tablosu) eklendi.
+- Madde 6 (hüküm/yetki/tavan üçlüsü) eklendi — rgsx timeout tartışması,
+  KD-2026-09-06-timeout-doctrine referanslı.
