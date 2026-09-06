@@ -49,9 +49,14 @@ function linuxCpuTime(pid) {
   const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
   const end = stat.lastIndexOf(")");
   const fields = stat.slice(end + 2).trim().split(/\s+/);
-  // alan 1'den başlar; utime=13, stime=14 (0-indexed: 12 ve 13)
-  const utime = Number(fields[12]) || 0;
-  const stime = Number(fields[13]) || 0;
+  // M5-bugfix (TASK-117, kannt: `node -e "while(true){}"` 8sn'de 3 jiffies
+  // okundu): ") " sonrasi fields[0] = state (alan 3) oldugundan alan N ->
+  // fields[N-3] dusuyor. utime alan 14 -> fields[11], stime alan 15 ->
+  // fields[12]. Eski kod fields[12]+fields[13] (stime+cutime) okuyordu;
+  // saf user-space CPU tuketimi (rustc/tsc/busy-loop) FLAT gorunup
+  // false-stall uretiyordu.
+  const utime = Number(fields[11]) || 0;
+  const stime = Number(fields[12]) || 0;
   return utime + stime; // jiffies; trend için birim önemsiz, bölme yok
 }
 

@@ -306,5 +306,27 @@
     "created": "2026-09-06",
     "updated": "2026-09-06",
     "file": "tasks/done/TASK-116-cpu-liveness-probe.md"
+  },
+  {
+    "id": "TASK-117",
+    "title": "cpu-liveness 5 acik madde: I/O grace, budget tavani, utime fix, grup-kill, final-JSON",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "liveness",
+      "build",
+      "live-test",
+      "cpu-probe",
+      "tree-kill",
+      "io-grace",
+      "budget"
+    ],
+    "depends_on": [
+      "TASK-116"
+    ],
+    "created": "2026-09-06",
+    "updated": "2026-09-06",
+    "file": "tasks/done/TASK-117-cpu-liveness-bes-madde.md"
   }
 ]

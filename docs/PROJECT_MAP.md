@@ -99,9 +99,10 @@ Public API:
 - `default` — `CpuLivenessPlugin`
 
 Sabitler (`plugins/lib/cpu-liveness-disclosure.ts`):
-- `CPU_LIVENESS_SENTINEL`, `CPU_LIVENESS_TEXT`
+- `CPU_LIVENESS_SENTINEL`, `CPU_LIVENESS_TEXT` (npx fallback),
+  `resolveAgentPath` + `buildCpuLivenessText` (mutlak `node <path>` disclosure)
 
-Config: `enabled` (default `true`). Test: `tests/cpu-liveness-disclosure.test.mjs`.
+Config: `enabled` (default `true`). Testler: `tests/cpu-liveness-disclosure.test.mjs`.
 Detay: `docs/opencode-cpu-liveness.md`.
 
 ### `plugins/server.ts` (TASK-114)
@@ -275,7 +276,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | Dosya | Amaç |
 |-------|------|
 | `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
-| `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`). Paket import: `@opencode-plugins/cpu-liveness-probe`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
+| `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
 
 ## Build Artifact — `dist/`

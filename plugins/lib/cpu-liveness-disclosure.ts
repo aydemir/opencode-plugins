@@ -21,10 +21,11 @@ export const CPU_LIVENESS_TEXT =
   "(e.g. `npx cpu-liveness-agent -- npm run build`). " +
   "Watches CPU time of pid + live descendants (includeTree default true); " +
   "stall = 3 consecutive delta=0 samples (interval 2000ms default). " +
-  "Flags go BEFORE --: `npx cpu-liveness-agent --intervalMs=1000 --stallThreshold=10 --allow-kill -- <cmd>`. " +
-  "Cmd is joined + run via /bin/bash -c (quote args with spaces). " +
-  "Exit: 0=clean, 1=stall w/o kill, 2=stall+killed (--allow-kill), 3=cmd failed. " +
-  "Never auto-kills unless --allow-kill (I/O-wait false-positive risk). " +
+  "Flags go BEFORE --: `npx cpu-liveness-agent --intervalMs=1000 --stallThreshold=10 --allow-kill --maxBudgetMs=600000 -- <cmd>`. " +
+    "Cmd is joined + run via /bin/bash -c (quote args with spaces). " +
+    "Exit: 0=clean, 1=stall w/o kill, 2=stall+killed (--allow-kill), 3=cmd failed, 4=budget exceeded (--maxBudgetMs). " +
+    "Fresh I/O keywords (Downloading/Locking/Waiting, last 15s) grant capped grace rounds (--ioGraceRounds, default 3; 0 disables). " +
+    "Never auto-kills unless --allow-kill (I/O-wait false-positive risk). " +
   "Linux /proc verified; macOS/Windows readers UNTESTED. " +
   "To disable: \"pluginOptions.opencode-cpu-liveness.enabled\": false."
 
@@ -61,9 +62,9 @@ export function buildCpuLivenessText(agentPath: string | null): string {
     "stall = 3 consecutive delta=0 samples (interval 2000ms default). " +
     "Flags go BEFORE --: `node " +
     agentPath +
-    " --intervalMs=1000 --stallThreshold=10 --allow-kill -- <cmd>`. " +
+    " --intervalMs=1000 --stallThreshold=10 --allow-kill --maxBudgetMs=600000 -- <cmd>`. " +
     "Cmd is joined + run via /bin/bash -c (quote args with spaces). " +
-    "Exit: 0=clean, 1=stall w/o kill, 2=stall+killed (--allow-kill), 3=cmd failed. " +
+    "Exit: 0=clean, 1=stall w/o kill, 2=stall+killed (--allow-kill), 3=cmd failed, 4=budget exceeded (--maxBudgetMs). " +
     "Never auto-kills unless --allow-kill (I/O-wait false-positive risk). " +
     "Linux /proc verified; macOS/Windows readers UNTESTED. " +
     "To disable: \"pluginOptions.opencode-cpu-liveness.enabled\": false."

@@ -27,6 +27,15 @@ function pgrepCount() {
   }
 }
 
+function pgrepCountM5() {
+  try {
+    const out = execFileSync("pgrep", ["-f", "[C]L_M5_"], { encoding: "utf8" });
+    return out.trim().split("\n").filter(Boolean).length;
+  } catch {
+    return 0;
+  }
+}
+
 function waitForOutput(child, re, ms) {
   return new Promise((resolve, reject) => {
     let buf = "";
@@ -55,6 +64,29 @@ test("SIGTERM: agent 143 ile çıkar, alt ağaç yetim kalmaz", { timeout: 30000
     assert.equal(code, 143);
     await new Promise((r) => setTimeout(r, 1000));
     assert.equal(pgrepCount(), 0, "yetim process kalmamalı");
+  } finally {
+    try {
+      agent.kill("SIGKILL");
+    } catch {}
+  }
+});
+
+test("SIGTERM: 3 katmanli zincir (agent→bash→sleep,sleep) grup-kill ile iner", { timeout: 30000 }, async () => {
+  if (!PLATFORM_VERIFIED) return;
+  // detached:true (M5) → bash child grup lideri → kill(-pid) tum agaci indirir.
+  const agent = spawn(
+    process.execPath,
+    [agentPath, "--", "exec -a CL_M5_A sleep 120 & exec -a CL_M5_B sleep 120 & wait"],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  try {
+    await waitForOutput(agent, /\[liveness\]/, 15000);
+    assert.ok(pgrepCountM5() >= 2, "iki sleep torunu calisiyor olmali");
+    agent.kill("SIGTERM");
+    const code = await new Promise((resolve) => agent.on("exit", resolve));
+    assert.equal(code, 143);
+    await new Promise((r) => setTimeout(r, 1000));
+    assert.equal(pgrepCountM5(), 0, "grupta sag kalan olmamali");
   } finally {
     try {
       agent.kill("SIGKILL");

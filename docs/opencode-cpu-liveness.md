@@ -35,14 +35,21 @@ yeri + shell-join notu içerir. Tam kullanım `scripts/cpu-liveness-probe/`'da:
   (disclosure'daki tam yol kopyalanır; örn. tek çekirdek cargo:
   `node <path> -- taskset -c 0 cargo build --jobs 1`)
   — pid + canlı torunların CPU toplamını izler (includeTree default true).
-- Flag'ler `--`'den ÖNCE: `node <path> --intervalMs=1000 --stallThreshold=10 --allow-kill -- <cmd>`
-  (default: interval 2000ms, stall eşiği 3 ardışık delta=0).
+- Flag'ler `--`'den ÖNCE: `node <path> --intervalMs=1000 --stallThreshold=10 --allow-kill --maxBudgetMs=600000 -- <cmd>`
+  (default: interval 2000ms, stall eşiği 3 ardışık delta=0, budget kapalı).
 - Komut join'lenip `/bin/bash -c` ile koşulur — boşluklu argümanları tırnakla.
 - Exit: `0`=temiz, `1`=stall ama öldürülmedi, `2`=stall+kill (`--allow-kill`),
-  `3`=komut hatalı.
+  `3`=komut hatalı, `4`=bütçe aşıldı (`--maxBudgetMs`, stall hükmüyle karışmaz).
 - `onStall` asla otomatik öldürmez (I/O-bekleme false-positive riski).
+- Taze I/O sinyali (son 15sn çıktıda Download/Fetch/Lock/Wait/Retry) + kalan
+  hak (`--ioGraceRounds`, default 3, 0 kapatır) → sayaç sıfırlanır, öldürülmez.
+  Bayat satır sayılmaz; tolerans sadece stall anında (delta==0) devreye girer.
 - Dış timeout agent'a SIGTERM/SIGINT atarsa alt ağaç tree-kill ile temizlenir
   (exit 143/130, `--allow-kill`'den bağımsız) — yetim `cargo/rustc` kalmaz.
+  Agent kendi process-group'unda çalışır (`detached:true`); terminalden manuel
+  Ctrl-C gruba gitmez — manuel durdurma `kill -TERM <agent-pid>` ile.
+- Her terminal sonda tek satır `[final-json]` (`reason/exit/signal/stallSamples/
+  samples/graceUsed`) — retry kararı bu kanıtla çağıranda verilir.
 - Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ.
 
 ## Doktrin: tavan vs tripwire (KD-2026-09-06-timeout-doctrine)

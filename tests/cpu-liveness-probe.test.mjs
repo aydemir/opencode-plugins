@@ -51,6 +51,26 @@ test("watchLiveness: busy process (CPU token döndürüyor) → up trend, stall 
   assert.equal(stallFired, false, "busy process'te onStall tetiklenmemeli");
 });
 
+test("readCpuTime: saf user-space spin (utime) artar — stime-only regresyonu", { timeout: 15000 }, async () => {
+  if (!PLATFORM_VERIFIED) return;
+  // TASK-117 M5-bugfix: okuyucu fields[12]+fields[13] (stime+cutime) okuyordu;
+  // `while(true){}` 8sn'de 3 jiffies gorunuyor, false-stall uretiyordu.
+  // Saf spin neredeyse tamamen utime biriktirir — stime-only okuma flat kalirdi.
+  const child = spawn(process.execPath, ["-e", "while(true){}"], { stdio: "ignore" });
+  try {
+    await sleep(500);
+    const a = readCpuTime(child.pid);
+    await sleep(700);
+    const b = readCpuTime(child.pid);
+    assert.ok(b > a, `utime artmali (a=${a}, b=${b})`);
+    assert.ok(b - a >= 10, `700ms spinde anlamli artis olmali (delta=${b - a})`);
+  } finally {
+    try {
+      child.kill("SIGKILL");
+    } catch {}
+  }
+});
+
 test("watchLiveness: idle-ish process yeterli süre beklerse stall tetikler", { timeout: 20000 }, async () => {
   if (!PLATFORM_VERIFIED) return;
   // 2 saniyelik aralık + eşik 2 → ~4s CPU'suz bekleme → stall.

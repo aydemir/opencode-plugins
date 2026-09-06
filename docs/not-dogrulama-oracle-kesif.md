@@ -87,6 +87,12 @@ ilerideki her "dış limit mi koymalıyım" sorusunun referans cevabı:
   "bütçe bitti, gel bak" sinyalidir, hüküm değil. Kaldırılamaz: probe'un kör
   noktası var (CPU yakan kaçak hep `delta>0` üretir) + harness sonlu sayı
   ister + bekleyen build değil turdur.
+  - İki katmanlı tavan (TASK-117 şerhi): **dış tavan** (harness `timeout_ms`)
+    production'da birincil ve zorunlu, agent'ın bilgisi dışında. **İç tavan**
+    (`--maxBudgetMs`, default kapalı, exit 4) test/standalone'da onun yerini
+    tutan kanıt mekanizmasıdır — "tavan dışarıda" ilkesiyle çelişmez, çünkü
+    ikisi farklı rol oynar; iç tavan dış tavanın yokluğunda kör noktayı
+    kapatır, varlığında erken ve gerekçeli (exit 4 ≠ stall hükmü) devreye girer.
 
 2. ve 5. maddenin kategorisine girer: zayıf oracle gibi burada da "kimin,
 neye dayanarak karar verdiği" sınırlandırılıyor.
@@ -102,3 +108,5 @@ neye dayanarak karar verdiği" sınırlandırılıyor.
 - Madde 5 (ilke + kanıt tablosu) eklendi.
 - Madde 6 (hüküm/yetki/tavan üçlüsü) eklendi — rgsx timeout tartışması,
   KD-2026-09-06-timeout-doctrine referanslı.
+- Madde 6 tavan alt-notu (iki katmanlı tavan: dış zorunlu + iç opt-in kanıt)
+  eklendi — TASK-117 M4 şerhi.

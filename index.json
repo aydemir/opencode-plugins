@@ -91,7 +91,7 @@
     "version": "0.1.0",
     "server_entry": "plugins/server.ts (exports[\"./server\"] -> dist/plugins/server.js)",
     "install": "opencode plugin -g opencode-plugins",
-      "note": "Tek paket dört plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
+    "note": "Tek paket dört plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
   },
   "key_decisions": [
     {
@@ -168,6 +168,11 @@
       "id": "KD-2026-09-06-timeout-doctrine",
       "date": "2026-09-06",
       "summary": "Timeout doktrini (rgsx tartismasi): HUKUMU (asildi/asılmadi) sadece probe verir (CPU kaniti); OLDURME yetkisi sadece --allow-kill (cagiran 'workload CPU-bound' der). Dis timeout akilsiz tavan-butcedir, genis tutulur; patlamasi hukum degil 'butce bitti, bak' sinyalidir. Uc bilesen CPU-bound beyaniyla yeter; beyansiz exit1+uyari+tavan dogru muhafazakar durustur."
+    },
+    {
+      "id": "KD-2026-09-06-cl-5madde",
+      "date": "2026-09-06",
+      "summary": "TASK-117: 5 acik madde kapandi (I/O grace taze-pencere+cap, --maxBudgetMs exit4, final-JSON, detached grup-kill). M4 testi utime off-by-one buldu (stime+cutime okunuyordu, saf spin flat → false-stall); duzeltildi + regresyon testi. Rate-dedektoru ve otomatik retry gerekceli kapsam-disi."
     }
   ],
   "mcp_servers": [
