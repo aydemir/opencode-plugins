@@ -137,3 +137,7 @@ PR'lar açıktır. Lütfen `docs/` içindeki davranış sözleşmesini bozmayın
 
 - OpenCode docs: https://opencode.ai/docs
 - Canlı konfigürasyon: `~/.config/opencode/opencode.jsonc`
+
+## Yazılar
+
+- [Oracle Problem — Canlı Doğrulama Disiplini](docs/oracle-problem-vaka-calismasi.md)
