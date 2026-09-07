@@ -35,6 +35,7 @@ import { dirname } from "node:path"
 import type { Plugin } from "@opencode-ai/plugin"
 import {
   buildNotice,
+  buildPendingSuffix,
   DISCLOSURE_SENTINEL,
   DISCLOSURE_TEXT,
   DEFAULT_MAX_FILES,
@@ -75,7 +76,14 @@ const SettleNoticePlugin: Plugin = async (_input, _options) => {
     "experimental.chat.system.transform": async (_input, output) => {
       if (!config.enabled) return
       if (output.system.some((s) => s.includes(DISCLOSURE_SENTINEL))) return
-      output.system.push(DISCLOSURE_TEXT)
+      // Dinamik ek: oturum açılışında bekleyen settlelari disclosure'a göm
+      // (snapshot, salt okunur — tool-output sunum katmanını baypas eder;
+      // bildirim + işaretleme after-hook'un işi, bkz TASK-123 deneyi).
+      const pending = scanSettled(
+        resolveEventDirs(config.eventDirs, process.env, cwd),
+        config.maxFiles,
+      )
+      output.system.push(DISCLOSURE_TEXT + buildPendingSuffix(pending))
     },
 
     "tool.execute.after": async (t, output) => {

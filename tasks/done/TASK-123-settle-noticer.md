@@ -75,3 +75,10 @@ dokümanda yazılır.
   da okunur (mevcut pluginlerin input.config cast'i korunur, ikisi
   birleştirilir). E2E gerçek Koşum-1 dizininde: ilk temas `[sn] settled:
   j1-kanitli PASSED (exit=0)`, ikinci temas sessiz.
+- (2026-09-07) Ek: dinamik-disclosure ship edildi (onaylı). Deney:
+  statik alıntı "yok" → kurulum hatası (alt-oturum farklı dizin);
+  `BUILD_MON_DIR` ile "Var: dyntest FAILED (exit=2)" — bekleyen settle
+  tool çağrılmadan disclosure'dan geldi. `buildPendingSuffix` (lib) +
+  3 test + doküman satırı. 111/111 yeşil. Semantik: disclosure =
+  oturum-açılış snapshot'ı (salt okunur), after-hook = bildirim +
+  işaretleme.

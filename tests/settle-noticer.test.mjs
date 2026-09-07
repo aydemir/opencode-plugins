@@ -24,6 +24,7 @@ import {
   resolveEventDirs,
   scanSettled,
   buildNotice,
+  buildPendingSuffix,
 } from "../dist/plugins/lib/settle-notice.js"
 import settleFactory from "../dist/plugins/opencode-settle-noticer.js"
 
@@ -231,4 +232,40 @@ test("hook: disclosure bir kez (sentinel idempotent)", async () => {
   await tr({}, out)
   await tr({}, out)
   assert.equal(out.system.filter((s) => s.includes(DISCLOSURE_SENTINEL)).length, 1)
+})
+
+test("buildPendingSuffix: boş → '', dolu → ad+olay+exit", () => {
+  assert.equal(buildPendingSuffix([]), "")
+  const s = buildPendingSuffix([{ ...PASSED, statusPath: "/e/j.status.json" }])
+  assert.ok(s.includes("j1-kanitli"))
+  assert.ok(s.includes("PASSED"))
+  assert.ok(s.includes("exit=0"))
+})
+
+test("transform: bekleyen settle disclosure'a gömülür (snapshot)", async () => {
+  const d = mktmp()
+  try {
+    writeStatus(d, "k", { ...PASSED, name: "k", ts: "2026-09-07T22:00:00Z" })
+    const inst2 = await settleFactory({ directory: "/tmp" }, { eventDirs: [d] })
+    const out = { system: [] }
+    await inst2["experimental.chat.system.transform"]({}, out)
+    assert.equal(out.system.length, 1)
+    assert.ok(out.system[0].includes(DISCLOSURE_SENTINEL))
+    assert.ok(out.system[0].includes("k PASSED (exit=0)"))
+  } finally {
+    rmSync(d, { recursive: true, force: true })
+  }
+})
+
+test("transform: bekleyen yoksa statik metin (ek yok)", async () => {
+  const d = mktmp()
+  try {
+    const inst = await settleFactory({ directory: "/tmp" }, { eventDirs: [d] })
+    const out = { system: [] }
+    await inst["experimental.chat.system.transform"]({}, out)
+    assert.equal(out.system.length, 1)
+    assert.ok(!out.system[0].includes("Pending settles:"))
+  } finally {
+    rmSync(d, { recursive: true, force: true })
+  }
 })

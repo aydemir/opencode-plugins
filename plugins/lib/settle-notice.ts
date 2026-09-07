@@ -166,3 +166,17 @@ export function buildNotice(records: SettleRecord[]): string {
   )
   return "\n\n" + lines.join("\n") + "\n"
 }
+
+/**
+ * Disclosure eki: oturum açılışında bekleyen settlelari sistem prompt'una
+ * gömer (snapshot semantiği — salt okunur, işaretleme yapmaz; bildirim +
+ * işaretleme `tool.execute.after`'ın işi). Kayıt yoksa "".
+ */
+export function buildPendingSuffix(records: SettleRecord[]): string {
+  if (records.length === 0) return ""
+  return (
+    " Pending settles: " +
+    records.map((r) => `${r.name} ${r.event} (exit=${r.exit})`).join("; ") +
+    "."
+  )
+}

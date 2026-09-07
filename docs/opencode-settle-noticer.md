@@ -22,6 +22,11 @@ yolu kodlar: **ajan bir dahaki temasta kaçırmaz**.
   ve `<name>.notified` işaretle (bir final bir kez; aynı adla YENİ
   final → ts/event farklı → tekrar bildirilir).
 - `experimental.chat.system.transform`: disclosure (sentinel idempotent).
+  Oturum açılışında bekleyen settlelari disclosure metnine gömer
+  (`Pending settles: <ad> <OLAY> (exit=)` — snapshot, salt okunur).
+  Tool-output sunum katmanını baypas eder (canlı deneyle doğrulandı:
+  alt-oturum bekleyeni tool çağırmadan disclosure'dan okudu).
+  İşaretleme yapmaz — bildirim + `.notified` after-hook'un işidir.
 
 ## Yapılandırma (`pluginOptions["opencode-settle-noticer"]`)
 

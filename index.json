@@ -201,6 +201,11 @@
       "id": "KD-2026-09-07-packaging",
       "date": "2026-09-07",
       "summary": "TASK-124: pack dry-run scripts/ count 0 buldu -> files += scripts (74K, build-mon.sh + cpu-liveness-probe artik tarball'da). settle-noticer zaten paketteydi (dist/plugins/docs). README 5 plugin + script tablosu + guncel agac; examples/opencode.jsonc settle-noticer eklendi. bun: lock degisikligi yok."
+    },
+    {
+      "id": "KD-2026-09-07-dyn-disclosure",
+      "date": "2026-09-07",
+      "summary": "TASK-123 ek: dinamik-disclosure ship (buildPendingSuffix). Deneyde statik alinti 'yok' kurulum hatasi cikti (dizin), BUILD_MON_DIR ile 'Var: dyntest FAILED' tool cagrilmadan geldi. Disclosure=snapshot (salt okunur), after-hook=bildirim+isaret. 111/111."
     }
   ],
   "mcp_servers": [
