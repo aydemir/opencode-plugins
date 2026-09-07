@@ -13,6 +13,8 @@ scripts/build-mon.sh --name j1 --stall-after 120 --timeout 3600 -- \
 
 # Bayraklar: --name --event-dir --stall-after (120sn) --kill-on-stall
 #   --kill-grace (60sn) --timeout (0=kapalı) --heartbeat (60sn)
+#   --rotate-size (10MB, 0=kapalı) --rotate-days (30, 0=kapalı)
+#   --rotate-keep (5)
 ```
 
 ## Olaylar
@@ -37,6 +39,20 @@ scripts/build-mon.sh --name j1 --stall-after 120 --timeout 3600 -- \
 Olay dizini: `--event-dir`, yoksa `$BUILD_MON_DIR`, o da yoksa
 çalışılan dizindeki `./tmp/build-mon`. Dizin ilk çalışta kendi
 `.gitignore`'unu oluşturur (olaylar repoya düşmez).
+
+## Rotasyon (TASK-122)
+
+İki dosya, iki kural:
+
+- **`<ad>.log`** (derleme çıktısı): finalde `PASSED` → silinir;
+  fail (`FAILED`/`ERROR`/`TIMED_OUT`/`STALLED`/`INTERRUPTED`) →
+  `<ad>.log.<olay>-<UTCts>` diye arşivlenir (sonraki koşumun
+  sıfırlaması delili ezmez).
+- **`events.jsonl`** (audit trail): `PASSED`'da silinmez. Startup'ta
+  boyut > `--rotate-size` veya dosya yaşı > `--rotate-days` ise
+  `events-<UTCts>.jsonl` diye arşivlenir; en yeni `--rotate-keep`
+  arşiv tutulur, eskiler silinir. Geçmiş (süre baseline'ı) korunur,
+  disk şişmez.
 
 ## İlişkiler
 

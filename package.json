@@ -29,7 +29,9 @@
     "opencode-truncation-noticer",
     "dhs",
     "ptc",
-    "truncation-notice"
+    "truncation-notice",
+    "opencode-settle-noticer",
+    "settle-notice"
   ],
   "author": "",
   "license": "MIT",
@@ -47,11 +49,13 @@
     "./opencode-build-tracker": "./dist/plugins/opencode-build-tracker.js",
     "./opencode-context-saver": "./dist/plugins/opencode-context-saver.js",
     "./opencode-truncation-noticer": "./dist/plugins/opencode-truncation-noticer.js",
+    "./opencode-settle-noticer": "./dist/plugins/opencode-settle-noticer.js",
     "./opencode-cpu-liveness": "./dist/plugins/opencode-cpu-liveness.js"
   },
   "files": [
     "dist",
     "plugins",
-    "docs"
+    "docs",
+    "scripts"
   ]
 }

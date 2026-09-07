@@ -18,11 +18,18 @@
 # Kullanım:
 #   build-mon.sh [--name ID] [--event-dir DIR] [--stall-after SN]
 #                [--kill-on-stall] [--kill-grace SN] [--timeout SN]
-#                [--heartbeat SN] -- KOMUT [ARGS...]
+#                [--heartbeat SN] [--rotate-size BYTES] [--rotate-days N]
+#                [--rotate-keep N] -- KOMUT [ARGS...]
 #
 # Örnek (opencode-bm bm_start içinden):
 #   build-mon.sh --name j1 --stall-after 120 --timeout 3600 -- \
 #     bash -c 'export CARGO_TARGET_DIR=/root/RGSX/rust-target-sandbox; cd /root/RGSX/manager-rs && cargo build -j 1'
+#
+# Rotasyon (TASK-122): $NAME.log finalde PASSED→silinir; fail (FAILED/ERROR/
+#   TIMED_OUT/STALLED/INTERRUPTED)→$NAME.log.<olay>-<UTCts> arşivlenir.
+#   events.jsonl audit-trail'dir, silinmez; startup'ta boyut > --rotate-size
+#   (default 10MB, 0=kapalı) veya yaş > --rotate-days (default 30, 0=kapalı)
+#   ise events-<UTCts>.jsonl arşivlenir, en yeni --rotate-keep (default 5) tutulur.
 #
 # Çıkış kodları: derlemenin kodu aynen taşınır; 124=timeout ile öldürüldü,
 #   111=stall sonrası öldürüldü, 130/143=monitör kesintiye uğradı.
@@ -37,9 +44,12 @@ KILL_GRACE=60
 TIMEOUT=0
 HEARTBEAT=60
 POLL=2
+ROTATE_SIZE=10485760
+ROTATE_DAYS=30
+ROTATE_KEEP=5
 
 usage() {
-  sed -n '2,28p' "${BASH_SOURCE[0]}"
+  sed -n '2,35p' "${BASH_SOURCE[0]}"
   exit 2
 }
 
@@ -52,6 +62,9 @@ while [[ $# -gt 0 ]]; do
     --kill-grace) KILL_GRACE="$2"; shift 2 ;;
     --timeout) TIMEOUT="$2"; shift 2 ;;
     --heartbeat) HEARTBEAT="$2"; shift 2 ;;
+    --rotate-size) ROTATE_SIZE="$2"; shift 2 ;;
+    --rotate-days) ROTATE_DAYS="$2"; shift 2 ;;
+    --rotate-keep) ROTATE_KEEP="$2"; shift 2 ;;
     --) shift; break ;;
     -h|--help) usage ;;
     *) echo "build-mon: bilinmeyen argüman: $1" >&2; usage ;;
@@ -61,10 +74,45 @@ done
 [[ $# -eq 0 ]] && { echo "build-mon: komut yok" >&2; usage; }
 [[ "$STALL_AFTER" =~ ^[0-9]+$ ]] || { echo "build-mon: --stall-after sayı olmalı" >&2; exit 2; }
 [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || { echo "build-mon: --timeout sayı olmalı" >&2; exit 2; }
+[[ "$ROTATE_SIZE" =~ ^[0-9]+$ ]] || { echo "build-mon: --rotate-size sayı olmalı" >&2; exit 2; }
+[[ "$ROTATE_DAYS" =~ ^[0-9]+$ ]] || { echo "build-mon: --rotate-days sayı olmalı" >&2; exit 2; }
+[[ "$ROTATE_KEEP" =~ ^[0-9]+$ ]] || { echo "build-mon: --rotate-keep sayı olmalı" >&2; exit 2; }
 
 mkdir -p "$EVENT_DIR"
 # Olay/log dosyaları git'e düşmesin (repo-local kalıcılık için tmp altında).
 [[ -f "$EVENT_DIR/.gitignore" ]] || printf '*\n!.gitignore\n' > "$EVENT_DIR/.gitignore"
+
+# --- rotasyon (TASK-122) -------------------------------------------------------
+# events.jsonl audit-trail'dir: silinmez, boyut/yaş eşiğinde arşivlenir.
+rotate_events() {
+  local ev="$EVENT_DIR/events.jsonl"
+  [[ -f "$ev" ]] || return 0
+  local do_rot=0
+  if [[ "$ROTATE_SIZE" -gt 0 ]]; then
+    local sz
+    sz="$(stat -c%s "$ev" 2>/dev/null || echo 0)"
+    [[ "$sz" -gt "$ROTATE_SIZE" ]] && do_rot=1
+  fi
+  if [[ "$do_rot" -eq 0 && "$ROTATE_DAYS" -gt 0 ]]; then
+    local now mtime age
+    now="$(date +%s)"
+    mtime="$(stat -c%Y "$ev" 2>/dev/null || echo "$now")"
+    age=$(( (now - mtime) / 86400 ))
+    [[ "$age" -gt "$ROTATE_DAYS" ]] && do_rot=1
+  fi
+  [[ "$do_rot" -eq 0 ]] && return 0
+  local ts arch f i
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  arch="$EVENT_DIR/events-$ts.jsonl"
+  mv "$ev" "$arch"
+  # keep: en yeni N arşiv tutulur, eskiler silinir.
+  i=0
+  for f in $(ls -t "$EVENT_DIR"/events-*.jsonl 2>/dev/null); do
+    i=$((i + 1))
+    [[ "$i" -gt "$ROTATE_KEEP" ]] && rm -f "$f"
+  done
+}
+rotate_events
 
 EVENTS="$EVENT_DIR/events.jsonl"
 STATUS="$EVENT_DIR/$NAME.status.json"
@@ -103,6 +151,17 @@ fisek() {
   if command -v notify-send >/dev/null 2>&1; then
     notify-send -u critical "build-mon [$NAME] $ev" "$msg" 2>/dev/null &
   fi
+}
+
+# archive_log OLAY: fail log'u arşivler (sonraki koşumun `: >` sıfırlaması
+# delili ezmesin). Arşivden sonra LOG arşivi gösterir (emit'in log alanı doğru olur).
+# OLAY küçük harf: failed/error/timed_out/stalled/interrupted.
+archive_log() {
+  local ev="$1" ts arch
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  arch="$EVENT_DIR/$NAME.log.$ev-$ts"
+  mv -f "$LOG" "$arch" 2>/dev/null || true
+  LOG="$arch"
 }
 
 # --- CPU ölçümü (/proc, grup toplamı) -----------------------------------------
@@ -146,10 +205,11 @@ TAIL_PID=$!
 
 cleanup_tail() { kill "$TAIL_PID" 2>/dev/null || true; }
 
-# Kesinti: ağacı öldür, olayı yaz, sinyale uygun kodla çık.
+# Kesinti: ağacı öldür, log'u arşivle, olayı yaz, sinyale uygun kodla çık.
 interrupted() {
   cleanup_tail
   kill_tree "$BUILD_PGID" TERM
+  archive_log interrupted
   emit INTERRUPTED "monitör kesintiye uğradı, derleme ağacı öldürüldü"
   fisek INTERRUPTED "monitör kesintiye uğradı ($NAME)"
   exit 143
@@ -217,6 +277,7 @@ sleep 0.3
 # --- final sınıflandırma -------------------------------------------------------
 if [[ "$killed_by" == "timeout" ]]; then
   wait "$BUILD_PID" 2>/dev/null || true
+  archive_log timed_out
   emit TIMED_OUT "tavan aşıldı (${TIMEOUT}sn), ağaç öldürüldü"
   fisek TIMED_OUT "tavan aşıldı ($NAME, ${TIMEOUT}sn)"
   exit 124
@@ -224,6 +285,7 @@ fi
 
 if [[ "$killed_by" == "stall" ]]; then
   wait "$BUILD_PID" 2>/dev/null || true
+  archive_log stalled
   emit STALLED "asılı kaldı (${silent}sn sessizlik), --kill-on-stall ile öldürüldü" 111
   fisek STALLED "asılı kaldı, öldürüldü ($NAME)"
   exit 111
@@ -236,6 +298,7 @@ elapsed=$((SECONDS - T0))
 if [[ "$CODE" -eq 0 ]]; then
   detail="derleme geçti (${elapsed}sn)"
   [[ "$stalled_before" -eq 1 ]] && detail="$detail [ara stall uyarısı vardı]"
+  rm -f "$LOG"
   emit PASSED "$detail" 0
   fisek PASSED "$detail ($NAME)"
   exit 0
@@ -245,6 +308,7 @@ fi
 if [[ "$CODE" -gt 128 ]]; then
   sig=$((CODE - 128))
   signame="$(kill -l "$sig" 2>/dev/null || echo "$sig")"
+  archive_log error
   emit ERROR "proses sinyal ile öldü: SIG${signame} (exit=$CODE, ${elapsed}sn)" "$CODE"
   fisek ERROR "sinyal ile öldü: SIG${signame} ($NAME)"
   exit "$CODE"
@@ -257,6 +321,7 @@ else
   detail="derleme hatayla bitti (exit=$CODE, ${elapsed}sn) :: ${excerpt:0:400}"
 fi
 [[ "$stalled_before" -eq 1 ]] && detail="$detail [ara stall uyarısı vardı]"
+archive_log failed
 emit FAILED "$detail" "$CODE"
 fisek FAILED "$detail ($NAME)"
 exit "$CODE"

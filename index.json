@@ -33,6 +33,14 @@
       "tests": "tests/cpu-liveness-disclosure.test.mjs",
       "status": "stable",
       "purpose": "CPU liveness probe script paketini LLM'e deklare eder (disclosure-only); agent mutlak `node <path>` yolunu bildirir (npx baska projede 404 verir, paket private:true). Ozellikle AGENTS.md okunmayan farkli projelerde."
+    },
+    {
+      "id": "opencode-settle-noticer",
+      "file": "plugins/opencode-settle-noticer.ts",
+      "docs": "docs/opencode-settle-noticer.md",
+      "tests": "tests/settle-noticer.test.mjs",
+      "status": "stable",
+      "purpose": "Biten build-mon derlemesini sorulmadan bildirir (next-contact notice); final+bildirilmemiş status'leri tool sonuclarina ekler, .notified ile idempotent."
     }
   ],
   "shared_lib": {
@@ -91,7 +99,7 @@
     "version": "0.1.0",
     "server_entry": "plugins/server.ts (exports[\"./server\"] -> dist/plugins/server.js)",
     "install": "opencode plugin -g opencode-plugins",
-    "note": "Tek paket dört plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
+      "note": "Tek paket beş plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness, settleNoticer). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
   },
   "key_decisions": [
     {
@@ -173,6 +181,26 @@
       "id": "KD-2026-09-06-cl-5madde",
       "date": "2026-09-06",
       "summary": "TASK-117: 5 acik madde kapandi (I/O grace taze-pencere+cap, --maxBudgetMs exit4, final-JSON, detached grup-kill). M4 testi utime off-by-one buldu (stime+cutime okunuyordu, saf spin flat → false-stall); duzeltildi + regresyon testi. Rate-dedektoru ve otomatik retry gerekceli kapsam-disi."
+    },
+    {
+      "id": "KD-2026-09-07-bm-kosum1",
+      "date": "2026-09-07",
+      "summary": "Koşum-1 (build-mon j1-kanitli): manager-rs -j1 tam derleme PASSED (2109sn, exit 0). bm_start MCP penceresine takilmadan id dondu, ps grup-ici/orphansiz, final dosya-push ile geldi (events.jsonl+status+banner). Bloklu wait (bm_output wait:true) gateway -32001 ile kesildi. Kayit: /tmp/opencode-live-test/buildmon-run1/KOSUM-1.md + TASK-119 addendum."
+    },
+    {
+      "id": "KD-2026-09-07-bm-rotation",
+      "date": "2026-09-07",
+      "summary": "TASK-122: build-mon log rotasyonu iki-dosya-iki-kural ($NAME.log PASSED->sil / fail->arsiv; events.jsonl audit-trail, boyut/yas rotasyonu + keep). 9/9 smoke gecti."
+    },
+    {
+      "id": "KD-2026-09-07-settle-notice",
+      "date": "2026-09-07",
+      "summary": "TASK-123: Kosum-1 push boslugu (dosya-push oldu, ajan-wakeup olmadi) next-contact notice ile kapandi. Yeni opencode-settle-noticer plugin'i tool.execute.after'da bildirilmemis finalleri [sn] notuyla yuzeye cikarir (.notified idempotent). Turn-arasi wakeup vaat edilmez (harness destegi ister). 108/108 test + gercek Kosum-1 dizininde E2E."
+    },
+    {
+      "id": "KD-2026-09-07-packaging",
+      "date": "2026-09-07",
+      "summary": "TASK-124: pack dry-run scripts/ count 0 buldu -> files += scripts (74K, build-mon.sh + cpu-liveness-probe artik tarball'da). settle-noticer zaten paketteydi (dist/plugins/docs). README 5 plugin + script tablosu + guncel agac; examples/opencode.jsonc settle-noticer eklendi. bun: lock degisikligi yok."
     }
   ],
   "mcp_servers": [

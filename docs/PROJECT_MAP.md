@@ -86,6 +86,7 @@ Tamamlayıcı mimari:
 - `opencode-mcp-bash-tools` → bash_safe (marker'lı) + bash_raw (ham)
 - **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
 - **`opencode-cpu-liveness` → uzun derlemede `cpu-liveness-agent` yolunu deklare eder**
+- **`opencode-settle-noticer` → biten build'i sorulmadan bildirir (next-contact)**
 
 ### `plugins/opencode-cpu-liveness.ts` (disclosure-only)
 
@@ -104,6 +105,31 @@ Sabitler (`plugins/lib/cpu-liveness-disclosure.ts`):
 
 Config: `enabled` (default `true`). Testler: `tests/cpu-liveness-disclosure.test.mjs`.
 Detay: `docs/opencode-cpu-liveness.md`.
+
+### `plugins/opencode-settle-noticer.ts` (TASK-123)
+
+**Amaç:** build-mon ile izlenen derleme bitince (settle) sonucu
+SORULMADAN modelin önüne düşürür — next-contact notice. Koşum-1 dersi:
+dosya-push olur ama ajan uyanmaz; bu plugin ajanın bir dahaki araç
+sonucunda kaçırmamasını sağlar. Wakeup YOK (dürüst sınır).
+
+Event hook'ları:
+- `experimental.chat.system.transform` — disclosure (idempotent, `[sn-disclosed]` sentinel)
+- `tool.execute.after` — `*.status.json` tara, final (`exit` alanı var) +
+  bildirilmemişse `[sn] settled:` notu ekle, `<name>.notified` işaretle
+
+Config (`SettleNoticeConfig`):
+| Alan | Default | İşlev |
+|------|---------|-------|
+| `enabled` | `true` | Global toggle |
+| `eventDirs` | yok | Açık liste; yoksa `$BUILD_MON_DIR` + `<cwd>/tmp/build-mon` (var olanlar) |
+| `maxFiles` | `20` | Dizin başına tarama üst sınırı |
+| `skipWhenContains` | `"#no-settle-notice"` | Per-call bypass substring |
+
+Sabitler/helper'lar (`plugins/lib/settle-notice.ts`): `NOTICE_SENTINEL`,
+`DISCLOSURE_SENTINEL`, `parseStatusFile`, `isFinal`, `isNotified`/
+`markNotified`, `resolveEventDirs`, `scanSettled`, `buildNotice`.
+Testler: `tests/settle-noticer.test.mjs`. Detay: `docs/opencode-settle-noticer.md`.
 
 ### `plugins/server.ts` (TASK-114)
 
@@ -278,7 +304,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
 | `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
-| `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`/proc` grup toplamı); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Doc: `docs/build-mon.md` |
+| `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`/proc` grup toplamı); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Rotasyon (TASK-122): `<ad>.log` PASSED→sil, fail→`<ad>.log.<olay>-<ts>` arşiv; `events.jsonl` audit-trail, boyut/yaş rotasyonu (`--rotate-size/days/keep`). Doc: `docs/build-mon.md` |
 
 ## Build Artifact — `dist/`
 

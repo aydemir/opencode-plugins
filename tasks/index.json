@@ -407,5 +407,63 @@
     "created": "2026-09-07",
     "updated": "2026-09-07",
     "file": "tasks/todo/TASK-121-disk-io-korlugu.md"
+  },
+  {
+    "id": "TASK-122",
+    "title": "build-mon log rotasyonu: $NAME.log PASSED→sil / fail→arşiv + events.jsonl boyut/yaş rotasyonu",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "build-mon",
+      "log-rotation",
+      "audit-trail",
+      "live-test"
+    ],
+    "depends_on": [],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/done/TASK-122-build-mon-log-rotasyonu.md"
+  },
+  {
+    "id": "TASK-123",
+    "title": "Settle-noticer: biten build'i sorulmadan bildir (next-contact notice plugin)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "settle",
+      "wakeup",
+      "plugin",
+      "build-mon",
+      "live-test"
+    ],
+    "depends_on": [
+      "TASK-119",
+      "TASK-122"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/done/TASK-123-settle-noticer.md"
+  },
+  {
+    "id": "TASK-124",
+    "title": "README build-monitör atfı + scripts/ npm paketine dahil + example settle-noticer",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "docs",
+      "packaging",
+      "npm",
+      "build-mon",
+      "readme"
+    ],
+    "depends_on": [
+      "TASK-123"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/done/TASK-124-readme-packaging.md"
   }
 ]

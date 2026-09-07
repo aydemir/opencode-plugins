@@ -4,7 +4,8 @@
     "./plugins/opencode-context-saver.ts",
     "./plugins/opencode-build-tracker.ts",
     "./plugins/opencode-truncation-noticer.ts",
-    "./plugins/opencode-cpu-liveness.ts"
+    "./plugins/opencode-cpu-liveness.ts",
+    "./plugins/opencode-settle-noticer.ts"
   ],
   // opencode-context-saver opsiyonel ayarları:
   //   enabled:        false   → tüm prune'ları devre dışı bırakır (debug).
@@ -40,6 +41,11 @@
     },
     "opencode-cpu-liveness": {
       "enabled": true
+    },
+    "opencode-settle-noticer": {
+      "enabled": true,
+      "maxFiles": 20,
+      "skipWhenContains": "#no-settle-notice"
     }
   },
   "mcp": {

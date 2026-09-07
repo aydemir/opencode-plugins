@@ -2,7 +2,7 @@
 
 > v0.1.0 — OpenCode için eklenti koleksiyonu
 
-OpenCode için eklenti koleksiyonu. Üç eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları ve **`opencode-truncation-noticer`** read-tool kırpma bildirimi. Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`).
+OpenCode için eklenti koleksiyonu. Beş eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları, **`opencode-truncation-noticer`** read-tool kırpma bildirimi, **`opencode-cpu-liveness`** CPU-izleme disclosure'ı ve **`opencode-settle-noticer`** biten build'i sorulmadan bildirme. Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`) ve script seti **`scripts/build-mon.sh`** (push/event build monitörü) + **`scripts/cpu-liveness-probe/`**.
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
 
@@ -13,9 +13,16 @@ OpenCode için eklenti koleksiyonu. Üç eklenti içerir — **`opencode-context
 | **opencode-context-saver** | `plugins/opencode-context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
 | **opencode-build-tracker** | `plugins/opencode-build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
 | **opencode-truncation-noticer** | `plugins/opencode-truncation-noticer.ts` | Native read sessiz kırpmasına `devamı var` marker'ı | — |
+| **opencode-cpu-liveness** | `plugins/opencode-cpu-liveness.ts` | Uzun derlemede `cpu-liveness-agent` yolunu deklare eder (disclosure-only) | — |
+| **opencode-settle-noticer** | `plugins/opencode-settle-noticer.ts` | Biten build-mon derlemesini sorulmadan bildirir (next-contact, `.notified` ile tek seferlik) | — |
 | **opencode-mcp-bash-tools** (MCP) | `plugins/mcp-bash-tools/` | `bash_safe` (otomatik kırpılan) + `bash_raw` (tam çıktı) | — |
 
-Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-tracker.md`
+| Script | Dosya | Amaç |
+|--------|-------|------|
+| **build-mon** | `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır, `events.jsonl` + banner + log rotasyonu) |
+| **cpu-liveness-probe** | `scripts/cpu-liveness-probe/` | Build process CPU izleme (probe + tree-kill + agent) |
+
+Detaylı doküman: `docs/opencode-context-saver.md`, `docs/opencode-build-tracker.md`, `docs/opencode-truncation-noticer.md`, `docs/opencode-cpu-liveness.md`, `docs/opencode-settle-noticer.md` ve `docs/build-mon.md`
 
 ## Kurulum
 
@@ -25,11 +32,14 @@ Detaylı doküman: `docs/opencode-context-saver.md` ve `docs/opencode-build-trac
 opencode plugin -g opencode-plugins
 ```
 
-Tek komut paketi kurar ve config'i günceller; üç plugin de
+Tek komut paketi kurar ve config'i günceller; beş plugin de
 `exports["./server"]` üzerinden yüklenir. Yapılandırma:
-`pluginOptions["opencode-plugins"]` (üçüne ortak; `enabled:false`
-üçünü birden kapatır). MCP server (`bash_safe`/`bash_raw`) bu akışa
+`pluginOptions["opencode-plugins"]` (beşine ortak; `enabled:false`
+beşini birden kapatır). MCP server (`bash_safe`/`bash_raw`) bu akışa
 dahil değildir — `mcp` bloğunu `examples/opencode.jsonc`'den kopyala.
+Uzun derlemeler için `scripts/build-mon.sh` (npm paketine dahildir) +
+`opencode-settle-noticer` kombinasyonu kullanılır (detay:
+`docs/build-mon.md`, `docs/opencode-settle-noticer.md`).
 
 ### 1) Seçenek A — Git submodule / kopyala
 
@@ -94,13 +104,19 @@ opencode-plugins/
 │   ├── opencode-context-saver.ts   # DHS PTC-mode
 │   ├── opencode-build-tracker.ts
 │   ├── opencode-truncation-noticer.ts
+│   ├── opencode-cpu-liveness.ts      # disclosure-only
+│   ├── opencode-settle-noticer.ts    # next-contact settle bildirimi
 │   ├── server.ts                     # npm paketi entry (exports["./server"], TASK-114)
-│   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice
+│   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice, settle-notice, cpu-liveness-disclosure
 │   └── mcp-bash-tools/             # MCP server (bash_safe/bash_raw)
-├── docs/
+├── scripts/
+│   ├── build-mon.sh                # push/event build monitörü (TASK-122 rotasyonlu)
+│   ├── cpu-liveness-probe/         # probe + tree-kill + agent
+│   ├── timeout-kill-probe/         # TASK-115 regresyon bekçisi
+│   └── tui-live/                   # TASK-112 TUI canlı test
+├── docs/                           # plugin + build-mon + vaka yazıları
 ├── examples/
 │   └── opencode.jsonc
-├── scripts/tui-live/               # TASK-112 TUI canlı test
 ├── tests/
 ├── package.json
 ├── tsconfig.json

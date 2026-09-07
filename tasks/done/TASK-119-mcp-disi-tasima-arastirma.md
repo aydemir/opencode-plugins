@@ -109,3 +109,26 @@ bu ortamda TAMAMLANAMADI; kanıtlı yol parçalı iştir.
 - (2026-09-07) Açılış: kapsam = araştırma + 3 koşum; DSH = hipotez kutusu.
   Plan-onaylı açılış; metodoloji: kanıtsız kestirme yok, iddiayı üreten
   katmandan bağımsız doğrulama.
+
+## Ek: Koşum-1 — opencode-bm taşıması kanıtlı (2026-09-07, bu dosya kapatıldıktan sonra)
+
+TASK-120 `default.task(background:true)` toplamasını kırık ilan etti; bu ek
+ayrı taşıyıcıyı kanıtlar: **opencode-bm `bm_start` + build-mon** çalışır.
+
+- Komut: `scripts/build-mon.sh --name j1-kanitli --event-dir
+  /tmp/opencode-live-test/buildmon-run1 --stall-after 120 --timeout 3600 --
+  bash -c 'cd /root/RGSX/manager-rs && cargo build -j 1'` (`bash-1`)
+- `STARTED` 20:37:30Z (pid=8809 pgid=8809) → `PASSED` 21:12:39Z (exit 0,
+  2109sn; cargo `Finished dev profile in 33m 11s`)
+- MCP dönüşü derleme sürerken (~15sn, id `bash-1`); `bm_list` takip etti;
+  final banner `bm_output`'a push oldu; `ps` grup-içi, bitişte temiz.
+- Bloklu bekleme (`bm_output wait:true`) gateway `-32001` ile kesildi —
+  push = dosya (`events.jsonl`), wait = yok.
+- Tam kayıt: `/tmp/opencode-live-test/buildmon-run1/KOSUM-1.md`
+- **Hüküm:** uzun-iş taşıyıcısı = `bm_start` + build-mon (kanıtlı);
+  `default.task` background disiplinden çıkarılmıştı, öyle kalır.
+- **Düzeltme (2026-09-07):** "final banner push oldu" fazla güçlüymüş —
+  banner akış tamponuna yazıldı ama ajana wakeup ULAŞMADI; bitiş
+  (21:12:39Z) ~30dk sonra kullanıcı sorusuyla poll'da öğrenildi.
+  Dosya-push kanıtlı, ajan-wakeup yok. Gerçek wakeup server-tarafı
+  `BM_ON_SETTLE` ister.

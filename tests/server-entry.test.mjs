@@ -7,11 +7,12 @@ import * as serverEntry from "../dist/plugins/server.js"
 // function olmalı (getLegacyPlugins Object.values iterate eder,
 // function olmayan tek export tüm paketi düşürür).
 
-test("server entry: exposes exactly the four plugin factories", () => {
+test("server entry: exposes exactly the five plugin factories", () => {
   assert.deepEqual(Object.keys(serverEntry).sort(), [
     "buildTracker",
     "contextSaver",
     "cpuLiveness",
+    "settleNoticer",
     "truncationNoticer",
   ])
   for (const [name, value] of Object.entries(serverEntry)) {
@@ -47,4 +48,6 @@ test("server entry: shared options object reaches all factories", async () => {
   assert.equal(typeof tn["tool.execute.after"], "function")
   const cl = await serverEntry.cpuLiveness({ directory: "/tmp" }, {})
   assert.equal(typeof cl["experimental.chat.system.transform"], "function")
+  const sn = await serverEntry.settleNoticer({ directory: "/tmp" }, {})
+  assert.equal(typeof sn["tool.execute.after"], "function")
 })
