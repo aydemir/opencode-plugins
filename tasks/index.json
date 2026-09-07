@@ -349,5 +349,63 @@
     "created": "2026-09-06",
     "updated": "2026-09-06",
     "file": "tasks/done/TASK-118-mcp-pencere-tavan-siniri.md"
+  },
+  {
+    "id": "TASK-119",
+    "title": "MCP-dışı taşıma gerekli mi: native bash + background yetenek araştırması (3 koşum, kod yok)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "research",
+      "mcp-window",
+      "background",
+      "live-test"
+    ],
+    "depends_on": [
+      "TASK-118"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/done/TASK-119-mcp-disi-tasima-arastirma.md"
+  },
+  {
+    "id": "TASK-120",
+    "title": "Background toplama INCONCLUSIVE: sonuç neden materialize olmuyor (3 koşum, kod yok)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "research",
+      "background",
+      "result-retrieval",
+      "live-test"
+    ],
+    "depends_on": [
+      "TASK-119"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/done/TASK-120-background-toplama-arastirma.md"
+  },
+  {
+    "id": "TASK-121",
+    "title": "Disk-I/O körlüğü: CPU-zaman tek sinyal sessiz disk fazında false-stall üretir mi (3 koşum, kod yok)",
+    "status": "todo",
+    "priority": "P2",
+    "environment": "linux",
+    "labels": [
+      "research",
+      "liveness",
+      "io-blindness",
+      "live-test"
+    ],
+    "depends_on": [
+      "TASK-117",
+      "TASK-119"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/todo/TASK-121-disk-io-korlugu.md"
   }
 ]

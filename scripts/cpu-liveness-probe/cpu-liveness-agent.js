@@ -8,11 +8,11 @@
 // otomatik öldürmez — değerlendirmeyi `--allow-kill` + stall süresi üzerinden
 // yapar ve I/O-bekleme riskine karşı bir ön-uyarı loglar.
 //
-// Kullanım:
-//   node cpu-liveness-agent.js -- <build cmd>...  [--intervalMs N] [--stallThreshold N]
-//   node cpu-liveness-agent.js -- <build cmd>...  --allow-kill
-//   node cpu-liveness-agent.js -- <build cmd>...  --intervalMs 1000 --stallThreshold 10
-//   node cpu-liveness-agent.js -- <build cmd>...  --maxBudgetMs 600000 [--ioGraceRounds 3]
+// Kullanım (flag'ler -- ÖNCESİNE yazılır, parse kodu sep öncesini okur):
+//   node cpu-liveness-agent.js -- <build cmd>...
+//   node cpu-liveness-agent.js --allow-kill -- <build cmd>...
+//   node cpu-liveness-agent.js --intervalMs=1000 --stallThreshold=10 -- <build cmd>...
+//   node cpu-liveness-agent.js --maxBudgetMs=600000 --ioGraceRounds=3 -- <build cmd>...
 //   Not: <build cmd>... tek bir shell komutu olarak birleştirilip /bin/bash -c
 //   ile koşulur (TASK-115 orphan regresyonu korunur). Boşluklu argümanlar
 //   tırnak içinde verilmeli: `-- node -e "let x=0;while(1){x}"`
@@ -59,7 +59,7 @@ for (let i = 0; i < sep; i++) {
 }
 
 if (cmdArgs.length === 0) {
-  console.error("Usage: node cpu-liveness-agent.js -- <build cmd...> [--allow-kill] [--intervalMs=N] [--stallThreshold=N] [--maxBudgetMs=N] [--ioFreshMs=N] [--ioGraceRounds=N]");
+  console.error("Usage: node cpu-liveness-agent.js [flags BEFORE --] -- <build cmd...> (flags: --allow-kill --intervalMs=N --stallThreshold=N --maxBudgetMs=N --ioFreshMs=N --ioGraceRounds=N)");
   process.exit(3);
 }
 
