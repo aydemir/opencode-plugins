@@ -465,5 +465,25 @@
     "created": "2026-09-07",
     "updated": "2026-09-07",
     "file": "tasks/done/TASK-124-readme-packaging.md"
+  },
+  {
+    "id": "TASK-125",
+    "title": "Dış watchdog: monitörün kendisi ölürse 'MONITOR_DEAD' kim diyecek (aday)",
+    "status": "todo",
+    "priority": "P3",
+    "environment": "both",
+    "labels": [
+      "build-mon",
+      "watchdog",
+      "oom",
+      "live-test"
+    ],
+    "depends_on": [
+      "TASK-122",
+      "TASK-123"
+    ],
+    "created": "2026-09-07",
+    "updated": "2026-09-07",
+    "file": "tasks/todo/TASK-125-dis-watchdog.md"
   }
 ]
