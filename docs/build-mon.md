@@ -61,3 +61,10 @@ Olay dizini: `--event-dir`, yoksa `$BUILD_MON_DIR`, o da yoksa
 - Server tarafı gerçek push için: `BM_ON_SETTLE` hook'u (`/root/opencode-bm`
   0.2.0+, `JobRegistry({ onSettle })`) — build-mon istemci katmanıdır,
   ikisi birlikte tam çözüm olur.
+
+## Testler
+
+`tests/build-mon.test.mjs` — push/event kanallarının regresyon testleri
+(banner + events.jsonl + status/result + log silme/arşiv + rotasyon).
+Kapsanmayan: INTERRUPTED sinyal enjeksiyonu ve `--kill-on-stall` ile
+öldürme (zamanlayıcı-flaky, gerekçe test dosyasında).

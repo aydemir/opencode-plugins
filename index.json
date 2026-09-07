@@ -206,6 +206,11 @@
       "id": "KD-2026-09-07-dyn-disclosure",
       "date": "2026-09-07",
       "summary": "TASK-123 ek: dinamik-disclosure ship (buildPendingSuffix). Deneyde statik alinti 'yok' kurulum hatasi cikti (dizin), BUILD_MON_DIR ile 'Var: dyntest FAILED' tool cagrilmadan geldi. Disclosure=snapshot (salt okunur), after-hook=bildirim+isaret. 111/111."
+    },
+    {
+      "id": "KD-2026-09-07-bm-tdd",
+      "date": "2026-09-07",
+      "summary": "TASK-122 ek: build-mon smoke'lari TDD'ye tasindi (tests/build-mon.test.mjs, 7 test). Suite 118/118. INTERRUPTED + kill-on-stall flaky diye disarida (gerekceli)."
     }
   ],
   "mcp_servers": [

@@ -74,3 +74,7 @@ rotasyona girmez); geriye uyumluluk korunur.
   T5 yaş + T6 eşik-altı rotasyonsuz + T7 TIMED_OUT-arşiv/exit124 +
   T8 help + T9 geçersiz flag exit2). Koşum-1 final push'undan sonra
   implemente edildi (çalışan script'e dokunulmadı).
+- (2026-09-07) Ek: smoke'lar TDD'ye taşındı — `tests/build-mon.test.mjs`
+  (7 test: PASSED/FAILED/TIMED_OUT/STALLED-uyarı/rotasyon/keep/flag).
+  Suite 118/118 yeşil. Kapsanmayan: INTERRUPTED + kill-on-stall ile
+  öldürme (flaky, dosyada gerekçeli).
