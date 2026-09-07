@@ -278,6 +278,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
 | `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
+| `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`/proc` grup toplamı); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Doc: `docs/build-mon.md` |
 
 ## Build Artifact — `dist/`
 
