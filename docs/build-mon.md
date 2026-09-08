@@ -22,7 +22,7 @@ scripts/build-mon.sh --name j1 --stall-after 120 --timeout 3600 -- \
 | Olay | Anlam | Çıkış |
 |---|---|---|
 | `PASSED` | Derleme geçti (exit 0) | 0 |
-| `FAILED` | Kırıldı — test/derleme hatası (log alıntısıyla) | derlemenin kodu |
+| `FAILED` | Kırıldı — test/derleme hatası (ecosystem pattern seti + log alıntısı; eşleşme yoksa son 5 satır fallback) | derlemenin kodu |
 | `ERROR` | Sinyal ile ölüm (SIGSEGV vb.) | 128+sig |
 | `STALLED` | Asılı şüphesi: çıktı **+** CPU sessizliği (`/proc` grup toplamı). Uyarı öldürmez; `--kill-on-stall` grace sonrası öldürür | (uyarı) / 111 |
 | `TIMED_OUT` | Global tavan aşıldı, ağaç öldürüldü | 124 |
@@ -62,9 +62,18 @@ Olay dizini: `--event-dir`, yoksa `$BUILD_MON_DIR`, o da yoksa
   0.2.0+, `JobRegistry({ onSettle })`) — build-mon istemci katmanıdır,
   ikisi birlikte tam çözüm olur.
 
+## Platform
+
+Stall tespitinin CPU ayağı Linux'a özgüdür (`/proc/<pid>/stat` +
+`ps -e -o pgid=` grup toplamı). macOS/Windows'ta CPU kısmı
+best-effort/untested — stall kararı pratikte çıktı sessizliğine düşer.
+Uzun link/download'u donma sanmama garantisi Linux'ta tamdır.
+
 ## Testler
 
 `tests/build-mon.test.mjs` — push/event kanallarının regresyon testleri
-(banner + events.jsonl + status/result + log silme/arşiv + rotasyon).
-Kapsanmayan: INTERRUPTED sinyal enjeksiyonu ve `--kill-on-stall` ile
-öldürme (zamanlayıcı-flaky, gerekçe test dosyasında).
+(banner + events.jsonl + status/result + log silme/arşiv + rotasyon +
+`--kill-on-stall` exit 111 + INTERRUPTED exit 143). Kill-path'ler
+deterministik marjlarla kapsanır (uzun uyuyan proses `sleep 30`,
+monitöre TERM enjeksiyonu); STALLED-uyarı testinde `sleep 6` ile ~4s
+tespit marjı bırakılır (POLL=2).

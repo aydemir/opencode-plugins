@@ -30,6 +30,9 @@ export const DISCLOSURE_TEXT =
   `session, it surfaces ` +
   `on next contact. Event dirs come from config eventDirs, else ` +
   `$BUILD_MON_DIR and <cwd>/tmp/build-mon (existing dirs only). ` +
+  `Long builds default: scripts/build-mon.sh --name <id> -- <cmd>; ` +
+  `result in tmp/build-mon/<id>.status.json via this notice. ` +
+  `cpu-liveness-agent is only a second layer for CPU-bound + --allow-kill. ` +
   `To disable entirely, set ` +
   `"pluginOptions.opencode-settle-noticer.enabled": false` +
   ` in opencode.jsonc. To bypass per-call, embed "${DEFAULT_SKIP_CONTAINS}" ` +

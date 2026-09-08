@@ -314,8 +314,15 @@ if [[ "$CODE" -gt 128 ]]; then
   exit "$CODE"
 fi
 
-excerpt="$(grep -m8 -iE 'error|FAILED|panicked|failures:' "$LOG" 2>/dev/null | head -8 | tr '\n' '|')"
-if grep -qiE 'test result: FAILED|FAILED|panicked|failures:' "$LOG" 2>/dev/null; then
+# Dil/ecosystem bazlı FAILED kanıtı: çıplak "error" taraması warning'lerde
+# FP üretir; güçlü sinyal seti + satır-başı error hint'i + tail fallback.
+FAIL_SIG='test result: FAILED|FAILED|panicked|failures:|error\[E[0-9]+|npm ERR!|error TS[0-9]+|^FAIL\b|^FAIL:|--- FAIL:|make.*\*\*\* |go: .* failed'
+ERR_HINT='^[[:space:]]*error:|^[[:space:]]*error\b'
+excerpt="$(grep -m8 -iE "$FAIL_SIG|$ERR_HINT" "$LOG" 2>/dev/null | head -8 | tr '\n' '|')"
+if [[ -z "$excerpt" ]]; then
+  excerpt="$(tail -n 5 "$LOG" 2>/dev/null | tr '\n' '|')"
+fi
+if grep -qiE "$FAIL_SIG" "$LOG" 2>/dev/null; then
   detail="testler/derleme KIRILDI (exit=$CODE, ${elapsed}sn) :: ${excerpt:0:400}"
 else
   detail="derleme hatayla bitti (exit=$CODE, ${elapsed}sn) :: ${excerpt:0:400}"

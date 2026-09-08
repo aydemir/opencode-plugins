@@ -5,14 +5,15 @@
  * olarak koşturulur, stdout banner + events.jsonl + status/result +
  * log silme/arşivleme + rotasyon assert edilir.
  *
- * Yavaş yollar kapsanmaz: INTERRUPTED (sinyal enjeksiyonu flaky),
- * --kill-on-stall ile öldürme (zamanlayıcı-flaky). Hızlı yollar
- * (--heartbeat 0, küçük --stall-after/--timeout) kullanılır.
+ * Yavaş yollar deterministik marjlarla kapsanır: --kill-on-stall
+ * (uzun uyuyan proses, exit 111) ve INTERRUPTED (monitöre TERM,
+ * exit 143). Hızlı yollar (--heartbeat 0, küçük --stall-after/--timeout)
+ * kullanılır.
  */
 
 import test from "node:test"
 import assert from "node:assert/strict"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
 import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
@@ -89,11 +90,14 @@ test("TIMED_OUT: exit 124 + timed_out arşivi", () => {
   assert.ok(ls(d).some((f) => /^t7\.log\.timed_out-/.test(f)))
 }, { timeout: 60000 })
 
+// Marj notu: stall tespiti ilk poll'da olur (~2s, POLL=2 sabit);
+// `sleep 6` ~4s marj bırakır (önceki `sleep 3` yük altında flaky idi:
+// tespit poll'u proses ölümünü ıskalayabiliyordu).
 test("STALLED uyarısı sonra PASSED (ara-stall notuyla)", () => {
   const d = mktmp()
   const r = run(
     ["--name", "t4", "--event-dir", d, "--heartbeat", "0", "--stall-after", "1",
-      "--", "bash", "-c", "sleep 3"],
+      "--", "bash", "-c", "sleep 6"],
     45000,
   )
   assert.equal(r.exit, 0)
@@ -137,3 +141,72 @@ test("geçersiz flag değeri → exit 2", () => {
   const r = run(["--name", "t9", "--event-dir", d, "--rotate-size", "abc", "--", "true"])
   assert.equal(r.exit, 2)
 })
+
+function waitFor(cond, timeoutMs, stepMs = 100) {
+  const t0 = Date.now()
+  return (async () => {
+    for (;;) {
+      const v = cond()
+      if (v) return v
+      if (Date.now() - t0 > timeoutMs) throw new Error("waitFor: zaman aşımı")
+      await new Promise((r) => setTimeout(r, stepMs))
+    }
+  })()
+}
+
+test("--kill-on-stall: sessiz proses öldürülür, exit 111", () => {
+  const d = mktmp()
+  // `sleep 30` tespit+öldürme yolunu (~7s) her zaman hayatta atlatır;
+  // zamanlayıcı marjı ~20s, deterministik.
+  const r = run(
+    ["--name", "tk", "--event-dir", d, "--heartbeat", "0",
+      "--stall-after", "1", "--kill-on-stall", "--kill-grace", "1",
+      "--", "sleep", "30"],
+    60000,
+  )
+  assert.equal(r.exit, 111)
+  assert.ok(r.stdout.includes("<<< BUILD-MON [tk] STALLED"))
+  const stalled = events(d).filter((e) => e.event === "STALLED")
+  assert.ok(stalled.length >= 1)
+  const fatal = stalled.find((e) => e.exit === 111)
+  assert.ok(fatal, "exit=111 STALLED finali yok")
+  const status = JSON.parse(readFileSync(join(d, "tk.status.json"), "utf8"))
+  assert.equal(status.event, "STALLED")
+  assert.equal(status.exit, 111)
+  assert.ok(ls(d).some((f) => /^tk\.log\.stalled-/.test(f)))
+}, { timeout: 90000 })
+
+test("INTERRUPTED: monitöre TERM → ağaç ölür, exit 143", async () => {
+  const d = mktmp()
+  const child = spawn("bash",
+    [SCRIPT, "--name", "ti", "--event-dir", d, "--heartbeat", "0", "--", "sleep", "30"],
+    { cwd: ROOT })
+  let stdout = ""
+  child.stdout.on("data", (c) => { stdout += String(c) })
+  child.stderr.on("data", (c) => { stdout += String(c) })
+  const exitP = new Promise((resolve) => child.on("exit", resolve))
+  try {
+    // Monitör STARTED'ı yazıp watchdog'a girene kadar bekle (max 15s).
+    const buildPid = await waitFor(() => {
+      const m = stdout.match(/izleniyor \(pid=(\d+)\)/)
+      return m ? Number(m[1]) : null
+    }, 15000)
+    child.kill("SIGTERM")
+    const code = await Promise.race([
+      exitP,
+      new Promise((r) => setTimeout(() => r("timeout"), 20000)),
+    ])
+    assert.equal(code, 143)
+    const evs = events(d).map((e) => e.event)
+    assert.ok(evs.includes("STARTED"))
+    assert.ok(evs.includes("INTERRUPTED"))
+    assert.ok(ls(d).some((f) => /^ti\.log\.interrupted-/.test(f)))
+    // Ağaç gerçekten öldü mü (TERM yarışına karşı deadline'lı bekle).
+    await waitFor(() => {
+      try { process.kill(buildPid, 0); return false }
+      catch { return true }
+    }, 5000)
+  } finally {
+    try { child.kill("SIGKILL") } catch { /* zaten çıkmış */ }
+  }
+}, { timeout: 90000 })
