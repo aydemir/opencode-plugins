@@ -41,6 +41,14 @@
       "tests": "tests/settle-noticer.test.mjs",
       "status": "stable",
       "purpose": "Biten build-mon derlemesini sorulmadan bildirir (next-contact notice); final+bildirilmemiş status'leri tool sonuclarina ekler, .notified ile idempotent."
+    },
+    {
+      "id": "opencode-hbmon",
+      "file": "plugins/opencode-hbmon.ts",
+      "docs": "docs/opencode-hbmon.md",
+      "tests": "tests/hbmon-tools.test.mjs",
+      "status": "stable",
+      "purpose": "hbmon custom tool'ları (hbmon_watch/hbmon_wait/hbmon_status): turn-içi ajan wakeup; bloklanan wait tek JSON ile uyandırır, polling yok."
     }
   ],
   "shared_lib": {
@@ -61,6 +69,21 @@
           "extractErrors",
           "formatPruneMarker",
           "shouldSkipForArgs"
+        ]
+      },
+      {
+        "path": "plugins/lib/hbmon-tools.ts",
+        "used_by": [
+          "opencode-hbmon"
+        ],
+        "exports": [
+          "HBMON_INSTALL_HINT",
+          "resolveHbmonBin",
+          "runHbmon",
+          "watchBuild",
+          "waitBuild",
+          "statusBuild",
+          "summarizeWait"
         ]
       },
       {
@@ -99,7 +122,7 @@
     "version": "0.1.0",
     "server_entry": "plugins/server.ts (exports[\"./server\"] -> dist/plugins/server.js)",
     "install": "opencode plugin -g opencode-plugins",
-      "note": "Tek paket beş plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness, settleNoticer). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
+      "note": "Tek paket altı plugin instance yükler (contextSaver, buildTracker, truncationNoticer, cpuLiveness, settleNoticer, hbmon). Hepsi aynı spec options objesini alır: pluginOptions[\"opencode-plugins\"]. MCP server (bash-tools) opencode plugin akışına dahil DEĞİL — mcp bloğu manuel eklenir (examples/opencode.jsonc)."
   },
   "key_decisions": [
     {

@@ -21,6 +21,7 @@
 | [TASK-101](./done/TASK-101-prune-marker-bilgilendirme.md) | prune marker'ı bilgilendirici yap | done ✅ | P1 |
 | [TASK-102](./done/TASK-102-no-prune-escape-mekanizmasi.md)   | `enabled=false` toggle + `#no-prune` escape marker | done ✅ | P1 |
 | [TASK-103](./todo/TASK-103-test-runner-ve-ci.md)             | vitest/node:test + npm test + GitHub Actions CI | todo | P2 |
+| [TASK-126](./done/TASK-126-hbmon-wait-tool.md)             | hbmon custom tool'ları (ajan wakeup) | done ✅ | P1 |
 
 Detaylar: `tasks/index.json`.
 

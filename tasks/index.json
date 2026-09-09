@@ -485,5 +485,24 @@
     "created": "2026-09-07",
     "updated": "2026-09-07",
     "file": "tasks/todo/TASK-125-dis-watchdog.md"
+  },
+  {
+    "id": "TASK-126",
+    "title": "hbmon custom tool'ları (ajan wakeup: watch/wait/status)",
+    "status": "done",
+    "priority": "P1",
+    "environment": "both",
+    "labels": [
+      "hbmon",
+      "plugin",
+      "wakeup",
+      "custom-tool"
+    ],
+    "depends_on": [
+      "TASK-123"
+    ],
+    "created": "2026-09-09",
+    "updated": "2026-09-09",
+    "file": "tasks/done/TASK-126-hbmon-wait-tool.md"
   }
 ]

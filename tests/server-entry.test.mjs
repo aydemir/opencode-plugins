@@ -7,11 +7,12 @@ import * as serverEntry from "../dist/plugins/server.js"
 // function olmalı (getLegacyPlugins Object.values iterate eder,
 // function olmayan tek export tüm paketi düşürür).
 
-test("server entry: exposes exactly the five plugin factories", () => {
+test("server entry: exposes exactly the six plugin factories", () => {
   assert.deepEqual(Object.keys(serverEntry).sort(), [
     "buildTracker",
     "contextSaver",
     "cpuLiveness",
+    "hbmon",
     "settleNoticer",
     "truncationNoticer",
   ])
@@ -27,14 +28,18 @@ test("server entry: every factory instantiates with hooks", async () => {
       Object.keys(instance).length > 0,
       `${name} instance must expose hooks`,
     )
-    assert.equal(
-      typeof (
-        instance.dispose ??
-        instance["tool.execute.after"] ??
-        instance["experimental.chat.system.transform"]
-      ),
-      "function",
-      `${name} must expose a callable hook`,
+    const hook =
+      instance.dispose ??
+      instance["tool.execute.after"] ??
+      instance["experimental.chat.system.transform"]
+    // Custom-tool plugin'leri (hbmon ilk örneği): tool.*.execute sayılır.
+    const tools = instance.tool ?? {}
+    const hasCallableTool = Object.values(tools).some(
+      (t) => t !== null && typeof t === "object" && typeof t.execute === "function",
+    )
+    assert.ok(
+      typeof hook === "function" || hasCallableTool,
+      `${name} must expose a callable hook or tool`,
     )
   }
 })
@@ -50,4 +55,6 @@ test("server entry: shared options object reaches all factories", async () => {
   assert.equal(typeof cl["experimental.chat.system.transform"], "function")
   const sn = await serverEntry.settleNoticer({ directory: "/tmp" }, {})
   assert.equal(typeof sn["tool.execute.after"], "function")
+  const hb = await serverEntry.hbmon({ directory: "/tmp" }, {})
+  assert.equal(typeof hb.tool.hbmon_wait.execute, "function")
 })

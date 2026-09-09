@@ -87,6 +87,7 @@ Tamamlayıcı mimari:
 - **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
 - **`opencode-cpu-liveness` → uzun derlemede `cpu-liveness-agent` yolunu deklare eder**
 - **`opencode-settle-noticer` → biten build'i sorulmadan bildirir (next-contact)**
+- **`opencode-hbmon` → hbmon custom tool'ları (turn-içi ajan wakeup)**
 
 ### `plugins/opencode-cpu-liveness.ts` (disclosure-only)
 
@@ -130,6 +131,25 @@ Sabitler/helper'lar (`plugins/lib/settle-notice.ts`): `NOTICE_SENTINEL`,
 `DISCLOSURE_SENTINEL`, `parseStatusFile`, `isFinal`, `isNotified`/
 `markNotified`, `resolveEventDirs`, `scanSettled`, `buildNotice`.
 Testler: `tests/settle-noticer.test.mjs`. Detay: `docs/opencode-settle-noticer.md`.
+
+### `plugins/opencode-hbmon.ts` (TASK-126)
+
+**Amaç:** hbmon custom tool'ları (`hbmon_watch`/`hbmon_wait`/`hbmon_status`) —
+ajan derlemeyi arka plana atar, tek bloklayan çağrıyla uyanır. Polling
+yok, context'e log sızmaz. settle-noticer next-contact kalır; bu plugin
+turn-içi beklemeyi kapatır. Dürüst sınır: gateway tavanı (~60sn) bloklu
+çağrıyı keser → wait default 50sn, ajan tekrar çağırır.
+
+Public API:
+- `default` — `HbmonPlugin` (yalnızca default export, TASK-111 kuralı)
+
+Mantık (`plugins/lib/hbmon-tools.ts`): `resolveHbmonBin` (HBMON_BIN/PATH),
+`runHbmon` (shell'siz execFile), `watchBuild`, `waitBuild` (+startup
+retry), `statusBuild`, `summarizeWait`.
+
+Config (`HbmonPluginConfig`): `enabled` (default `true`),
+`bin` (HBMON_BIN yerine geçer), `defaultTimeoutSec` (default `50`).
+Testler: `tests/hbmon-tools.test.mjs`. Detay: `docs/opencode-hbmon.md`.
 
 ### `plugins/server.ts` (TASK-114)
 
@@ -305,6 +325,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
 | `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`/proc` grup toplamı); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Rotasyon (TASK-122): `<ad>.log` PASSED→sil, fail→`<ad>.log.<olay>-<ts>` arşiv; `events.jsonl` audit-trail, boyut/yaş rotasyonu (`--rotate-size/days/keep`). Doc: `docs/build-mon.md` |
+| `scripts/setup.mjs` (`npm run setup`) | Tamset kurulum: artifact doğrulama (`dist/` yoksa `npm run build` ister) + canlı config'e `plugin:"opencode-plugins"` ve `mcp.opencode-mcp-bash-tools` bloğunu merge eder (mutlak server.js yoluyla, `.bak.<ts>` yedekli) + script seti kontrolü. Bayraksız yazmaz (exit 2), `--dry-run`/`--check` CI-dostu. Testler: `tests/setup.test.mjs` |
 
 ## Build Artifact — `dist/`
 
