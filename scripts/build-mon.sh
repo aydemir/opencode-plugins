@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# LEGACY: yeni kurulumlar scripts/hbmon-build-mon.sh kullanmalı
+# (aynı sözleşme, hbmon motoru; bkz docs/hbmon-migration.md).
+# Bu dosya geriye uyumluluk için korunuyor, silinmeyecek.
 # scripts/build-mon.sh — push/event build monitörü (opencode-bm ile kullanım için).
 #
 # opencode-bm'de completion wakeup YOK (poll-only). Bu wrapper, derleme
