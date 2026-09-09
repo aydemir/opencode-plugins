@@ -22,6 +22,7 @@
 | [TASK-102](./done/TASK-102-no-prune-escape-mekanizmasi.md)   | `enabled=false` toggle + `#no-prune` escape marker | done ✅ | P1 |
 | [TASK-103](./todo/TASK-103-test-runner-ve-ci.md)             | vitest/node:test + npm test + GitHub Actions CI | todo | P2 |
 | [TASK-126](./done/TASK-126-hbmon-wait-tool.md)             | hbmon custom tool'ları (ajan wakeup) | done ✅ | P1 |
+| [TASK-127](./todo/TASK-127-node-port-build-mon.md)             | build-mon adapter Node portu | todo | P2 |
 
 Detaylar: `tasks/index.json`.
 

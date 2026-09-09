@@ -504,5 +504,25 @@
     "created": "2026-09-09",
     "updated": "2026-09-09",
     "file": "tasks/done/TASK-126-hbmon-wait-tool.md"
+  },
+  {
+    "id": "TASK-127",
+    "title": "build-mon adapter'larının Node portu (bash'tan kurtulma)",
+    "status": "todo",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "build-mon",
+      "hbmon",
+      "nodejs",
+      "windows",
+      "port"
+    ],
+    "depends_on": [
+      "TASK-122"
+    ],
+    "created": "2026-09-09",
+    "updated": "2026-09-09",
+    "file": "tasks/todo/TASK-127-node-port-build-mon.md"
   }
 ]
