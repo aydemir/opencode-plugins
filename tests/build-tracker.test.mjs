@@ -174,3 +174,104 @@ test("build-tracker: default silent — no stdout, status still goes to app.log 
     cap.restore()
   }
 })
+
+test("build-tracker: extraErrorPatterns catches pytest FAILED (builtin gap)", async () => {
+  const cap = captureConsole()
+  try {
+    const fakeClient = { app: { log: async () => {} } }
+    // Not: session açmak için komut build sayılmalı (after-hook sess.active
+    // yoksa erken döner); çıktı regex katmanını test eder.
+    const cmd = "npm run build"
+    const pytestOut = "FAILED test_x.py::test_bar - assert 1 == 2"
+    // Önce kanıt: default listede pytest formatı yok → failure yok.
+    const plain = await BuildHooksPlugin({ client: fakeClient }, { verbose: true })
+    const t0 = { callID: "py0", tool: "bash", args: { command: cmd } }
+    await plain["tool.execute.before"](t0, { args: t0.args })
+    await plain["tool.execute.after"](t0, { output: pytestOut })
+    assert.ok(!cap.logs.some((l) => l.includes("onBuildFailure")), "builtin misses pytest")
+    // Additive desenle yakalanır.
+    const plugin = await BuildHooksPlugin(
+      { client: fakeClient },
+      { verbose: true, extraErrorPatterns: ["^FAILED\\s"] },
+    )
+    const t = { callID: "py1", tool: "bash", args: { command: cmd } }
+    await plugin["tool.execute.before"](t, { args: t.args })
+    await plugin["tool.execute.after"](t, { output: pytestOut })
+    assert.ok(cap.logs.some((l) => l.includes("onBuildFailure")), "extra pattern hits")
+  } finally {
+    cap.restore()
+  }
+})
+
+test("build-tracker: extraErrorPatterns is additive, builtins retained", async () => {
+  const cap = captureConsole()
+  try {
+    const fakeClient = { app: { log: async () => {} } }
+    const plugin = await BuildHooksPlugin(
+      { client: fakeClient },
+      { verbose: true, extraErrorPatterns: ["^FAILED\\s"] },
+    )
+    const t = { callID: "ad1", tool: "bash", args: { command: "npm run build" } }
+    await plugin["tool.execute.before"](t, { args: t.args })
+    await plugin["tool.execute.after"](t, { output: "npm ERR! boom" })
+    assert.ok(cap.logs.some((l) => l.includes("onBuildFailure")), "builtin still active")
+  } finally {
+    cap.restore()
+  }
+})
+
+test("build-tracker: invalid extraErrorPatterns throws at init (fail-loud)", async () => {
+  const fakeClient = { app: { log: async () => {} } }
+  await assert.rejects(
+    BuildHooksPlugin({ client: fakeClient }, { extraErrorPatterns: ["(["] }),
+    /invalid extraErrorPatterns/,
+  )
+})
+
+test("build-tracker: mini-disclosure once (sentinel idempotent, TASK-129)", async () => {
+  const fakeClient = { app: { log: async () => {} } }
+  const plugin = await BuildHooksPlugin({ client: fakeClient }, {})
+  const output = { system: [] }
+  await plugin["experimental.chat.system.transform"]({}, output)
+  await plugin["experimental.chat.system.transform"]({}, output)
+  assert.equal(output.system.length, 1)
+  assert.ok(output.system[0].includes("[build-tracker]"), "sentinel")
+  assert.ok(output.system[0].includes("extraErrorPatterns"), "feature pointer")
+  assert.ok(output.system[0].includes("app.log"), "log semantics")
+})
+
+test("build-tracker: array command (hbmon argv) opens a session (TASK-128)", async () => {
+  const cap = captureConsole()
+  try {
+    const fakeClient = { app: { log: async () => {} } }
+    const plugin = await BuildHooksPlugin({ client: fakeClient }, { verbose: true })
+    const t = {
+      callID: "arr1",
+      tool: "hbmon_watch",
+      args: { command: ["cargo", "build", "--release"] },
+    }
+    await plugin["tool.execute.before"](t, { args: t.args })
+    assert.ok(cap.logs.some((l) => l.includes("onBuildStart")), "argv session opens")
+    assert.ok(cap.logs.some((l) => l.includes("cargo build --release")), "argv joined")
+  } finally {
+    cap.restore()
+  }
+})
+
+test("build-tracker: pytest session + FAILED output + extra pattern = failure (TASK-128 e2e)", async () => {
+  const cap = captureConsole()
+  try {
+    const fakeClient = { app: { log: async () => {} } }
+    const plugin = await BuildHooksPlugin(
+      { client: fakeClient },
+      { verbose: true, extraErrorPatterns: ["^FAILED\\s"] },
+    )
+    const t = { callID: "pytest1", tool: "bash", args: { command: "pytest tests/ -x" } }
+    await plugin["tool.execute.before"](t, { args: t.args })
+    assert.ok(cap.logs.some((l) => l.includes("onBuildStart")), "pytest opens session")
+    await plugin["tool.execute.after"](t, { output: "FAILED test_x.py::test_bar - assert" })
+    assert.ok(cap.logs.some((l) => l.includes("onBuildFailure")), "failure detected")
+  } finally {
+    cap.restore()
+  }
+})

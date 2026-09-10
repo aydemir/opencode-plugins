@@ -80,3 +80,21 @@ test("transform hook: enabled:false disables disclosure", async () => {
   await instance["experimental.chat.system.transform"]({}, output)
   assert.equal(output.system.length, 0)
 })
+
+test("drift guard: builder text is info-equivalent to static fallback", () => {
+  // buildCpuLivenessText (canlı metin) ile CPU_LIVENESS_TEXT (fallback)
+  // ayrışırsa LLM oturuma göre farklı bilgi alır (2026-09-10: ioGraceRounds
+  // cümlesi builder'da yoktu). Kilit bilgi parçaları ikisinde de olmalı.
+  const live = buildCpuLivenessText("/tmp/fake-agent.js")
+  for (const frag of [
+    "ioGraceRounds",
+    "Downloading/Locking/Waiting",
+    "0=clean",
+    "--allow-kill",
+    "/bin/bash -c",
+    "pluginOptions.opencode-cpu-liveness.enabled",
+  ]) {
+    assert.ok(CPU_LIVENESS_TEXT.includes(frag), `fallback has ${frag}`)
+    assert.ok(live.includes(frag), `builder has ${frag}`)
+  }
+})

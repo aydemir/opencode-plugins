@@ -17,11 +17,13 @@ export const DISCLOSURE_SENTINEL = "[tn-disclosed]"
 export const DEFAULT_SKIP_CONTAINS = "#no-trunc-notice"
 
 export const DISCLOSURE_TEXT =
-  `[tn-disclosed] Truncation Noticer is active. When you call the native ` +
-  `\`read\` tool on a file, if the output stops mid-file, a marker like ` +
+  `[tn-disclosed] Truncation Noticer is active. Native \`read\` output lines ` +
+  `look like "<lineNo>\\t<line>" — if the last line number is below the file's ` +
+  `total, the output stopped mid-file and a marker like ` +
   `"[tn] truncated: X more lines after line N (of T total). Re-read with ` +
   `offset=N+1 limit=200, OR use bash_raw: sed -n 'N+1,Tp' <path>" will be ` +
-  `appended to the output. To disable this plugin entirely, set ` +
+  `appended. Never assume a truncated read is the full file — follow the ` +
+  `marker's offset/sed (copy-paste ready). To disable this plugin entirely, set ` +
   `"pluginOptions.opencode-truncation-noticer.enabled": false` +
   ` in opencode.jsonc. To bypass per-call, embed "${DEFAULT_SKIP_CONTAINS}" ` +
   `in the read args.`

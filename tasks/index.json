@@ -263,7 +263,7 @@
       "TASK-113"
     ],
     "created": "2026-09-05",
-    "updated": "2026-09-05",
+    "updated": "2026-09-10",
     "file": "tasks/todo/TASK-114-npm-publish-opencode-plugin.md"
   },
   {
@@ -391,7 +391,7 @@
   {
     "id": "TASK-121",
     "title": "Disk-I/O körlüğü: CPU-zaman tek sinyal sessiz disk fazında false-stall üretir mi (3 koşum, kod yok)",
-    "status": "todo",
+    "status": "done",
     "priority": "P2",
     "environment": "linux",
     "labels": [
@@ -405,8 +405,9 @@
       "TASK-119"
     ],
     "created": "2026-09-07",
-    "updated": "2026-09-07",
-    "file": "tasks/todo/TASK-121-disk-io-korlugu.md"
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-121-disk-io-korlugu.md",
+    "resolved_at": "2026-09-10"
   },
   {
     "id": "TASK-122",
@@ -469,7 +470,7 @@
   {
     "id": "TASK-125",
     "title": "Dış watchdog: monitörün kendisi ölürse 'MONITOR_DEAD' kim diyecek (aday)",
-    "status": "todo",
+    "status": "done",
     "priority": "P3",
     "environment": "both",
     "labels": [
@@ -483,8 +484,9 @@
       "TASK-123"
     ],
     "created": "2026-09-07",
-    "updated": "2026-09-07",
-    "file": "tasks/todo/TASK-125-dis-watchdog.md"
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-125-dis-watchdog.md",
+    "resolved_at": "2026-09-10"
   },
   {
     "id": "TASK-126",
@@ -524,5 +526,77 @@
     "created": "2026-09-09",
     "updated": "2026-09-09",
     "file": "tasks/done/TASK-127-node-port-build-mon.md"
+  },
+  {
+    "id": "TASK-128",
+    "title": "Build komut tanıma: array-arg + test-runner kapsamı (tracker körlüğü)",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "build-tracker",
+      "lib-prune",
+      "arg-contract"
+    ],
+    "depends_on": [],
+    "created": "2026-09-10",
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-128-build-komut-tanima.md",
+    "resolved_at": "2026-09-10"
+  },
+  {
+    "id": "TASK-129",
+    "title": "LLM disclosure doğruluğu: cpu-liveness drift + build-tracker mini-disclosure + sn hbmon cümlesi",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "llm-disclosure",
+      "cpu-liveness",
+      "build-tracker",
+      "settle-noticer"
+    ],
+    "depends_on": [],
+    "created": "2026-09-10",
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-129-llm-disclosure-dogrulugu.md",
+    "resolved_at": "2026-09-10"
+  },
+  {
+    "id": "TASK-130",
+    "title": "Ölü setup akışı: README/package.json `scripts/setup.mjs`'ye dayanıyor, dosya yok",
+    "status": "done",
+    "priority": "P2",
+    "environment": "both",
+    "labels": [
+      "setup",
+      "docs",
+      "installation"
+    ],
+    "depends_on": [],
+    "created": "2026-09-10",
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-130-olu-setup-akisi.md",
+    "resolved_at": "2026-09-10"
+  },
+  {
+    "id": "TASK-131",
+    "title": "settle-noticer bayatlık sezgisi: finalsız + yaşlı heartbeat'e stale-notice (yeni process yok)",
+    "status": "done",
+    "priority": "P3",
+    "environment": "both",
+    "labels": [
+      "settle-noticer",
+      "build-mon",
+      "staleness",
+      "next-contact"
+    ],
+    "depends_on": [
+      "TASK-125"
+    ],
+    "created": "2026-09-10",
+    "updated": "2026-09-10",
+    "file": "tasks/done/TASK-131-settle-stale-notice.md",
+    "resolved_at": "2026-09-10"
   }
 ]

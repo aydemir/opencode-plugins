@@ -13,8 +13,12 @@
 
 ```ts
 interface BuildConfig {
-  thresholdMs: number      // default 120000 (2 dk)
-  buildKeywords: string[]  // default: build, compile, make, cargo, npm run, yarn, pnpm, bun run, tsc, webpack, vite, esbuild, rollup, tailwind, next build, gradle, maven, docker build, pip install, pip3 install, forge, rain, rgsx
+  thresholdMs: number           // default 120000 (2 dk)
+  verbose?: boolean             // default false (Termux ghost-text guard)
+  extraErrorPatterns?: string[] // default [] — builtin BUILD_ERROR_PATTERNS'e
+                                // EK regex gövdeleri (`m` flag ile derlenir).
+                                // Örn. pytest: ["^FAILED\\s"]. Anchor kullanın;
+                                // geçersiz desen init'te throw eder (fail-loud).
 }
 interface BuildSession {
   active: boolean
@@ -52,10 +56,10 @@ endSession(status)     → console.log onBuildSuccess/onBuildFailure + reset (op
 }
 ```
 
-Custom keywords:
+Custom error patterns (additive — builtin'ler korunur):
 
 ```ts
-BuildHooksPlugin(input, { thresholdMs: 60000, buildKeywords: ["cargo", "npm run"] })
+BuildHooksPlugin(input, { thresholdMs: 60000, extraErrorPatterns: ["^FAILED\\s"] })
 ```
 
 ## Davranış Notları

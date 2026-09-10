@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import { isBuildCommand } from "./lib/prune.js"
+import { BUILD_TRACKER_SENTINEL, BUILD_TRACKER_TEXT } from "./lib/build-tracker-disclosure.js"
 
 interface BuildConfig {
   thresholdMs: number
@@ -10,6 +11,19 @@ interface BuildConfig {
    * `client.app.log` ile veriliyor, stdout log'u gereksiz.
    */
   verbose?: boolean
+  /**
+   * Builtin `BUILD_ERROR_PATTERNS` listesine EK desenler (additive —
+   * default'lar korunur, üzerine yazılmaz; birikimli-listelerde merge,
+   * tam-listelerde replace kuralı).
+   * String regex gövdesi olarak `m` flag'iyle derlenir (`^` satır
+   * başlarında çalışır). Örn. pytest için `"^FAILED\\s"`, cargo-test
+   * alt satırları için `"^test .* FAILED$"`.
+   * Satır-başı anchor kullanın — ankorsuz genel kelimeler (örn. `error`)
+   * yorum/help-text'ten false positive üretir (builtin'lardaki `^`
+   * anchor'lar bu yüzden var). Geçersiz desen init'te throw eder
+   * (fail-loud; `alwaysRawCommands` `regex:` presedenti).
+   */
+  extraErrorPatterns?: string[]
 }
 
 interface BuildSession {
@@ -24,6 +38,7 @@ interface BuildSession {
 const DEFAULT_CONFIG: BuildConfig = {
   thresholdMs: 120000,
   verbose: false,
+  extraErrorPatterns: [],
 }
 
 const BUILD_ERROR_PATTERNS = [
@@ -42,6 +57,12 @@ function getCommandFromArgs(args: unknown): string {
   if (!args || typeof args !== "object") return ""
   const a = args as Record<string, unknown>
   if (typeof a.command === "string") return a.command
+  // hbmon_watch gibi argv-dizili araçlar: string[] → join (segmenter
+  // zaten shell operatörlerine bölüyor, TASK-128).
+  if (Array.isArray(a.command)) {
+    const parts = a.command.filter((p): p is string => typeof p === "string")
+    if (parts.length > 0) return parts.join(" ")
+  }
   if (typeof a.cmd === "string") return a.cmd
   if (typeof a.input === "string") return a.input
   return ""
@@ -49,6 +70,21 @@ function getCommandFromArgs(args: unknown): string {
 
 function createSession(): BuildSession {
   return { active: false, command: "", callIDs: [], startTime: 0, status: "idle", buildCallID: null }
+}
+
+/**
+ * Kullanıcı desenlerini derle. `m` flag sabit — `^`/`$` satır
+ * sınırlarında çalışmalı (builtin'larla aynı semantik). Geçersiz desen
+ * construct-time'da throw eder; sessizce yutmak yanlış-✅ demektir.
+ */
+function compileExtraErrorPatterns(patterns: readonly string[]): RegExp[] {
+  return patterns.map((p) => {
+    try {
+      return new RegExp(p, "m")
+    } catch {
+      throw new Error(`build-tracker: invalid extraErrorPatterns entry: ${JSON.stringify(p)}`)
+    }
+  })
 }
 
 function formatDuration(ms: number): string {
@@ -63,6 +99,12 @@ interface ToolAfterOutput {
 
 const BuildHooksPlugin: Plugin = async (input, options?: Record<string, unknown>) => {
   const config: BuildConfig = { ...DEFAULT_CONFIG, ...(options ?? {}) }
+  // Additive: builtin'ler + kullanıcı desenleri. Replace yok — kullanıcı
+  // deseni ekleyince rustc/npm/tsc kapsamı kaybolmaz.
+  const errorPatterns: RegExp[] = [
+    ...BUILD_ERROR_PATTERNS,
+    ...compileExtraErrorPatterns(config.extraErrorPatterns ?? []),
+  ]
   const sess = createSession()
   const pendingCalls = new Map<string, number>()
   const client = (input as unknown as { client?: { app?: { log?: (b: unknown) => Promise<void> | void } } }).client
@@ -106,6 +148,13 @@ const BuildHooksPlugin: Plugin = async (input, options?: Record<string, unknown>
       pendingCalls.clear()
     },
 
+    // Mini-disclosure (TASK-129, ~45 token): LLM `extraErrorPatterns` +
+    // `app.log` satır anlamını oturum başında öğrenir. Sentinel-idempotent.
+    "experimental.chat.system.transform": async (_input, output) => {
+      if (output.system.some((s) => s.includes(BUILD_TRACKER_SENTINEL))) return
+      output.system.push(BUILD_TRACKER_TEXT)
+    },
+
     "tool.execute.before": async (t, output) => {
       const args = (output as { args?: unknown })?.args ?? (t as { args?: unknown }).args ?? {}
       const cmd = getCommandFromArgs(args)
@@ -135,7 +184,7 @@ const BuildHooksPlugin: Plugin = async (input, options?: Record<string, unknown>
       // kelime araması yorum satırı, help text gibi durumlarda false positive
       // üretiyor. Anchor'lar (^, satır başı) yorum/help'i filtreler, gerçek
       // build hata çıktısını yakalar.
-      const hasError = BUILD_ERROR_PATTERNS.some((re) => re.test(outStr))
+      const hasError = errorPatterns.some((re) => re.test(outStr))
       const isBuildCall = sess.buildCallID === t.callID
 
       // Surface'e (output.output) yazmıyoruz — context-saver kırpabilir,

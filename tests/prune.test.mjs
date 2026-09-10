@@ -10,6 +10,7 @@ import {
   formatPruneMarker,
   formatShortPruneMarker,
   matchesRawPatterns,
+  matchesSkipTools,
   resolvePruneBudget,
 } from "../dist/plugins/lib/prune.js"
 
@@ -185,4 +186,49 @@ test("formatShortPruneMarker: backwards-compatible when called with only stats",
   const out = formatShortPruneMarker({ originalChars: 100, keptChars: 50 })
   assert.match(out, /Raw ways:/)
   assert.match(out, /#no-prune/)
+})
+
+test("matchesSkipTools: exact match (native tools)", () => {
+  assert.equal(matchesSkipTools("read", ["read", "bash_safe"]), true)
+  assert.equal(matchesSkipTools("Read", ["read", "Read"]), true)
+  assert.equal(matchesSkipTools("bash", ["read", "bash_safe"]), false)
+})
+
+test("matchesSkipTools: _suffix match survives MCP server key renames", () => {
+  const list = ["bash_safe", "bash_raw"]
+  assert.equal(matchesSkipTools("bash_safe", list), true)
+  assert.equal(matchesSkipTools("bash_raw", list), true)
+  assert.equal(matchesSkipTools("opencode-mcp-bash-tools_bash_safe", list), true)
+  assert.equal(matchesSkipTools("opencode-mcp-bash-tools_bash_raw", list), true)
+  assert.equal(matchesSkipTools("futurekey_bash_safe", list), true)
+})
+
+test("matchesSkipTools: underscore boundary prevents false positives", () => {
+  // "bread" ends with "read" but not "_read" — must NOT match.
+  assert.equal(matchesSkipTools("bread", ["read"]), false)
+  assert.equal(matchesSkipTools("thread", ["read"]), false)
+  assert.equal(matchesSkipTools("notbash_safe", ["bash_safe"]), false)
+  assert.equal(matchesSkipTools("xread", ["read"]), false)
+})
+
+test("matchesSkipTools: case-sensitive, empty entries ignored", () => {
+  assert.equal(matchesSkipTools("READ", ["read"]), false)
+  assert.equal(matchesSkipTools("read", [""]), false)
+  assert.equal(matchesSkipTools("read", []), false)
+})
+
+test("isBuildCommand: test runners open sessions (TASK-128)", () => {
+  assert.equal(isBuildCommand("pytest"), true)
+  assert.equal(isBuildCommand("pytest tests/ -x"), true)
+  assert.equal(isBuildCommand("python -m pytest tests/"), true)
+  assert.equal(isBuildCommand("npx jest"), true)
+  assert.equal(isBuildCommand("npx vitest run"), true)
+  assert.equal(isBuildCommand("jest src/"), true)
+})
+
+test("isBuildCommand: bare interpreters stay quiet (noise guard, TASK-128)", () => {
+  assert.equal(isBuildCommand("python script.py"), false)
+  assert.equal(isBuildCommand("node server.js"), false)
+  assert.equal(isBuildCommand("npx eslint ."), false)
+  assert.equal(isBuildCommand("python3 -c \"print(1)\""), false)
 })

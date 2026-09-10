@@ -1,12 +1,14 @@
-# opencode-mcp-bash-tools
+# bash (eski ad: opencode-mcp-bash-tools)
 
 MCP server (stdio) that exposes two schema-controlled alternatives to
-opencode's native `bash` tool:
+opencode's native `bash` tool. Server-içi adlar `safe` / `raw`; opencode
+TUI'de `<config-key>_<tool>` olarak görünür — config key `bash` olunca
+TUI adları `bash_safe` / `bash_raw` olur:
 
-| Tool | Behavior | Schema-controlled args |
-|---|---|---|
-| `bash_safe` | middle-prune + marker (default) | `max_chars`, `head_chars`, `tail_chars`, `timeout_ms` |
-| `bash_raw` | full output, no prune | `max_chars` (filesystem guard only), `timeout_ms` |
+| Server-içi ad | TUI adı (`bash` key ile) | Behavior | Schema-controlled args |
+|---|---|---|---|
+| `safe` | `bash_safe` | middle-prune + marker (default) | `max_chars`, `head_chars`, `tail_chars`, `timeout_ms` |
+| `raw` | `bash_raw` | full output, no prune | `max_chars` (filesystem guard only), `timeout_ms` |
 
 ## Why
 
@@ -17,8 +19,8 @@ opencode's native `bash` tool has a fixed schema (`command`,
 ignored by opencode because they are not part of the tool's schema.
 
 This MCP server fixes that by exposing our **own** tools with **our**
-schema. LLM can pick `bash_safe` (default) or `bash_raw` (full output)
-and the bypass actually works.
+schema. LLM can pick `bash_safe` (TUI adı; server-içi `safe`) or
+`bash_raw` (TUI adı; server-içi `raw`) and the bypass actually works.
 
 ## Install
 
@@ -36,7 +38,7 @@ Add to your `~/.config/opencode/opencode.jsonc`:
 ```jsonc
 {
   "mcp": {
-    "opencode-mcp-bash-tools": {
+    "bash": {
       "type": "local",
       "command": ["node", "/root/opencode-plugins/dist/plugins/mcp-bash-tools/server.js"],
       "enabled": true
@@ -45,15 +47,16 @@ Add to your `~/.config/opencode/opencode.jsonc`:
 }
 ```
 
-The server name in your config (`opencode-mcp-bash-tools` here) must
-match the `<server-name>_<tool-name>` tool names that opencode uses
-(`opencode-mcp-bash-tools_bash_safe`, `opencode-mcp-bash-tools_bash_raw`)
-— and that `opencode-context-saver` plugin's `skipTools` list also
-matches.
+TUI'de kısa görünmesi için config key `bash` kullanın (eski uzun key
+`opencode-mcp-bash-tools` de çalışır ama TUI'de
+`opencode-mcp-bash-tools_bash_safe` gibi uzun adlara yol açar). Server
+name (`bash` burada) `<server-name>_<tool-name>` TUI adlarını belirler
+(`bash_safe`, `bash_raw`) — ve `opencode-context-saver` plugin'in
+`skipTools` suffix kuralı bu adları key'den bağımsız yakalar.
 
 ## Marker format
 
-When `bash_safe` prunes, output looks like:
+When `bash_safe` (server-içi `safe`) prunes, output looks like:
 
 ```
 [Run ls /tmp]
@@ -71,7 +74,7 @@ output (schema-controlled, actually works).
 
 ## Plugin interaction
 
-`opencode-context-saver` plugin (TASK-110) skips MCP tool names
-(`mcp__opencode-mcp-bash-tools__bash_safe`,
-`mcp__opencode-mcp-bash-tools__bash_raw`) so the two layers don't
-double-prune.
+`opencode-context-saver` plugin (TASK-110) skips MCP tool names by
+suffix rule (`bash_safe`, `bash_raw` match any `<key>_bash_safe` /
+`<key>_bash_raw`) so the two layers don't double-prune — server key
+renames can't silently break the skip.

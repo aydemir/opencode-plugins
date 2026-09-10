@@ -1,9 +1,11 @@
 /**
- * opencode-mcp-bash-tools — stdio MCP server
+ * bash (eski ad: opencode-mcp-bash-tools) — stdio MCP server
  *
- * İki tool sunar:
- *   - bash_safe: middle-prune + marker (default).
- *   - bash_raw:  full output (no prune).
+ * İki tool sunar (server-içi adlar; opencode TUI'de `<config-key>_<tool>`
+ * olarak görünür — config key `bash` olunca TUI adları `bash_safe` /
+ * `bash_raw` olur):
+ *   - safe: middle-prune + marker (default; TUI: bash_safe).
+ *   - raw:  full output (no prune; TUI: bash_raw).
  *
  * MCP protokolü: JSON-RPC 2.0, line-delimited, stdin/stdout.
  * opencode MCP standardı.
@@ -14,7 +16,7 @@ import { bashRawHandler, bashRawSchema } from "./tools/bash_raw.js"
 import * as fs from "node:fs"
 
 const SERVER_INFO = {
-  name: "opencode-mcp-bash-tools",
+  name: "bash",
   version: "0.1.0",
 }
 
@@ -22,7 +24,7 @@ const PROTOCOL_VERSION = "2024-11-05"
 
 const TOOLS = [
   {
-    name: "bash_safe",
+    name: "safe",
     description:
       "Execute a bash command and return its output. If output exceeds " +
       "`max_chars`, it is middle-pruned with a `[... pruned: ...]` marker. " +
@@ -32,7 +34,7 @@ const TOOLS = [
     handler: bashSafeHandler,
   },
   {
-    name: "bash_raw",
+    name: "raw",
     description:
       "Execute a bash command and return its FULL output without pruning. " +
       "Use only when you specifically need unpruned output (e.g. dumping " +

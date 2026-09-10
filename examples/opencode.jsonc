@@ -61,7 +61,9 @@
     },
     // Kendi server'imiz: once derle (dist/ repoda yok):
     //   npm run build   (veya: bun run build)
-    "opencode-mcp-bash-tools": {
+    // TUI'de kısa görünmesi için key `bash` (araçlar `bash_safe`/`bash_raw`
+    // olarak listelenir; server-içi adlar `safe`/`raw`).
+    "bash": {
       "type": "local",
       "command": ["node", "./dist/plugins/mcp-bash-tools/src/server.js"],
       "enabled": true

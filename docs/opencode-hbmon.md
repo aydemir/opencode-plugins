@@ -14,6 +14,10 @@ hbmon ikiliği: `HBMON_BIN` env (veya plugin `bin` opsiyonu), yoksa
 `PATH`'teki `hbmon`. Bulunamazsa tool kurulum ipucuyla döner
 (öldürmez): `cargo install --git https://github.com/aydemir/hbmon`.
 
+> crates.io yayını bilinçli ertelendi: API stabil olana kadar tek kaynak
+> git'tir (`docs/decisions.md` — 2026-09-10 kararı). `cargo install hbmon`
+> henüz YOK; deneme, 404/yanlış paket verir.
+
 ## Akış (ajan için)
 
 ```

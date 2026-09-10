@@ -15,10 +15,13 @@ import { join } from "node:path"
 import {
   MARKER_SENTINEL,
   DISCLOSURE_SENTINEL,
+  DISCLOSURE_TEXT,
   countLines,
   parseLastLineNo,
   buildMarker,
 } from "../dist/plugins/lib/truncation-notice.js"
+import TruncationNoticePlugin from "../dist/plugins/opencode-truncation-noticer.js"
+import { bashSafeHandler } from "../dist/plugins/mcp-bash-tools/src/tools/bash_safe.js"
 
 const SEP = "\t"
 
@@ -129,4 +132,100 @@ test("end-to-end: full file read → no marker expected", () => {
 test("exports: sentinel + disclosure constants", () => {
   assert.equal(MARKER_SENTINEL, "[tn] truncated:")
   assert.ok(DISCLOSURE_SENTINEL.includes("[tn-"))
+})
+
+// --- hook-level watchTools tests (suffix rule + merge) ---
+
+function makeBigFile(lines = 50) {
+  const dir = mkdtempSync(join(tmpdir(), "tn-hook-"))
+  const f = join(dir, "big.txt")
+  const arr = []
+  for (let i = 1; i <= lines; i++) arr.push(`line content ${i}`)
+  writeFileSync(f, arr.join("\n") + "\n")
+  return { dir, f }
+}
+
+function partialReadOutput(upto = 10) {
+  const arr = []
+  for (let i = 1; i <= upto; i++) arr.push(`${i}${SEP}line content ${i}`)
+  return arr.join("\n") + "\n"
+}
+
+test("watchTools: read watched by default (marker appended)", async () => {
+  const { dir, f } = makeBigFile()
+  try {
+    const plugin = await TruncationNoticePlugin({})
+    const output = { output: partialReadOutput(10) }
+    await plugin["tool.execute.after"](
+      { callID: "w1", tool: "read", args: { filePath: f } },
+      output,
+    )
+    assert.ok(output.output.includes(MARKER_SENTINEL), "marker appended")
+    assert.ok(output.output.includes("40 more lines after line 10"), "counts")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("watchTools: suffix rule watches <key>_read, ignores bread", async () => {
+  const { dir, f } = makeBigFile()
+  try {
+    const plugin = await TruncationNoticePlugin({})
+    const out1 = { output: partialReadOutput(10) }
+    await plugin["tool.execute.after"](
+      { callID: "w2", tool: "somekey_read", args: { filePath: f } },
+      out1,
+    )
+    assert.ok(out1.output.includes(MARKER_SENTINEL), "prefixed read watched")
+    const out2 = { output: partialReadOutput(10) }
+    await plugin["tool.execute.after"](
+      { callID: "w3", tool: "bread", args: { filePath: f } },
+      out2,
+    )
+    assert.ok(!out2.output.includes(MARKER_SENTINEL), "bread not watched")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("watchTools: user list merges with defaults (read retained)", async () => {
+  const { dir, f } = makeBigFile()
+  try {
+    const plugin = await TruncationNoticePlugin({ config: { watchTools: ["mytool"] } })
+    const out1 = { output: partialReadOutput(10) }
+    await plugin["tool.execute.after"](
+      { callID: "w4", tool: "read", args: { filePath: f } },
+      out1,
+    )
+    assert.ok(out1.output.includes(MARKER_SENTINEL), "default read retained")
+    const out2 = { output: partialReadOutput(10) }
+    await plugin["tool.execute.after"](
+      { callID: "w5", tool: "mytool", args: { filePath: f } },
+      out2,
+    )
+    assert.ok(out2.output.includes(MARKER_SENTINEL), "user tool watched")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+// --- cross-layer name asserts: TUI-visible tool names in user-facing texts ---
+
+test("names: tn disclosure + marker reference bash_raw (TUI name)", () => {
+  assert.ok(DISCLOSURE_TEXT.includes("bash_raw"), "disclosure mentions bash_raw")
+  const m = buildMarker(3, 116, "/tmp/foo.md", 4)
+  assert.ok(m.includes("bash_raw"), "marker mentions bash_raw")
+})
+
+test("names: bash_safe prune marker references bash_raw (TUI name)", async () => {
+  const res = await bashSafeHandler({
+    command: "printf '%5000s' ''",
+    description: "big spaces",
+    max_chars: 100,
+    head_chars: 10,
+    tail_chars: 10,
+  })
+  const text = res.content[0].text
+  assert.ok(text.includes("pruned:"), "output was pruned")
+  assert.ok(text.includes("bash_raw"), "marker points at bash_raw")
 })

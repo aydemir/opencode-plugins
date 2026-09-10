@@ -36,13 +36,17 @@ import type { Plugin } from "@opencode-ai/plugin"
 import {
   buildNotice,
   buildPendingSuffix,
+  buildStaleNotice,
   DISCLOSURE_SENTINEL,
   DISCLOSURE_TEXT,
   DEFAULT_MAX_FILES,
   DEFAULT_SKIP_CONTAINS,
+  DEFAULT_STALE_AFTER_MS,
   markNotified,
+  markStaleNotified,
   resolveEventDirs,
   scanSettled,
+  scanStale,
 } from "./lib/settle-notice.js"
 
 interface SettleNoticeConfig {
@@ -50,6 +54,13 @@ interface SettleNoticeConfig {
   eventDirs?: string[]
   maxFiles?: number
   skipWhenContains?: string
+  /**
+   * Bayatlık eşiği (ms). Son olay final-dışı ve yaşı bunu aşarsa
+   * `[sn] stale:` bildirilir (default 180000 = 3 × heartbeat).
+   * Geçersiz değerde default'a düşülür (fail-soft; bu pluginde
+   * construct-time throw presedenti yok).
+   */
+  staleAfterMs?: number
 }
 
 const DEFAULT_CONFIG = {
@@ -57,6 +68,7 @@ const DEFAULT_CONFIG = {
   eventDirs: undefined as string[] | undefined,
   maxFiles: DEFAULT_MAX_FILES,
   skipWhenContains: DEFAULT_SKIP_CONTAINS,
+  staleAfterMs: DEFAULT_STALE_AFTER_MS,
 }
 
 const SettleNoticePlugin: Plugin = async (_input, _options) => {
@@ -67,6 +79,12 @@ const SettleNoticePlugin: Plugin = async (_input, _options) => {
     ((_input as unknown as { config?: SettleNoticeConfig }).config ?? {}) as SettleNoticeConfig
   const fromOptions = ((_options ?? {}) as SettleNoticeConfig) as SettleNoticeConfig
   const config = { ...DEFAULT_CONFIG, ...fromInput, ...fromOptions }
+  const staleAfterMs =
+    typeof config.staleAfterMs === "number" &&
+    Number.isFinite(config.staleAfterMs) &&
+    config.staleAfterMs >= 0
+      ? config.staleAfterMs
+      : DEFAULT_STALE_AFTER_MS
   const cwd =
     typeof (_input as unknown as { directory?: unknown }).directory === "string"
       ? ((_input as unknown as { directory?: string }).directory as string)
@@ -99,12 +117,25 @@ const SettleNoticePlugin: Plugin = async (_input, _options) => {
       if (dirs.length === 0) return
 
       const settled = scanSettled(dirs, config.maxFiles)
-      if (settled.length === 0) return
+      // Bayatlık (TASK-131): finalsız + yaşlı heartbeat → monitör-ölümü
+      // şüphesi. Settle yolundan bağımsız dal; ikisi de boşsa dokunma.
+      const stale = scanStale(dirs, staleAfterMs, config.maxFiles)
+      if (settled.length === 0 && stale.length === 0) return
 
-      output.output = (output.output ?? "") + buildNotice(settled)
-      for (const rec of settled) {
-        markNotified(dirname(rec.statusPath), rec)
+      let suffix = ""
+      if (settled.length > 0) {
+        suffix += buildNotice(settled)
+        for (const rec of settled) {
+          markNotified(dirname(rec.statusPath), rec)
+        }
       }
+      if (stale.length > 0) {
+        suffix += buildStaleNotice(stale)
+        for (const rec of stale) {
+          markStaleNotified(dirname(rec.statusPath), rec)
+        }
+      }
+      output.output = (output.output ?? "") + suffix
     },
   }
 }

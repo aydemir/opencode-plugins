@@ -92,6 +92,54 @@ test("context-saver: skipTools — bash long output is pruned", async () => {
   assert.ok(output.output.includes("pruned"))
 })
 
+test("context-saver: skipTools — MCP bash tools not double-pruned (new + legacy names)", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
+  const big = "a".repeat(600)
+  // Yeni TUI adları (config key `bash` + server-içi `safe`/`raw`).
+  for (const tool of ["bash_safe", "bash_raw"]) {
+    const t = { callID: `mcp-${tool}`, tool, args: {} }
+    await plugin["tool.execute.before"](t)
+    const output = { output: big }
+    await plugin["tool.execute.after"](t, output)
+    assert.equal(output.output, big, tool)
+  }
+  // Eski uzun adlar suffix kuralıyla hâlâ atlanır (listede ayrıca yok).
+  for (const tool of ["opencode-mcp-bash-tools_bash_safe", "opencode-mcp-bash-tools_bash_raw"]) {
+    const t = { callID: `mcp-${tool}`, tool, args: {} }
+    await plugin["tool.execute.before"](t)
+    const output = { output: big }
+    await plugin["tool.execute.after"](t, output)
+    assert.equal(output.output, big, tool)
+  }
+  // Gelecekteki key rename'leri de suffix kuralıyla kapsanır.
+  const t = { callID: "mcp-future", tool: "somefuturekey_bash_raw", args: {} }
+  await plugin["tool.execute.before"](t)
+  const output = { output: big }
+  await plugin["tool.execute.after"](t, output)
+  assert.equal(output.output, big)
+})
+
+test("context-saver: skipTools — user list merges with defaults (no silent loss)", async () => {
+  const plugin = await ToolCompactPlugin({ client: fakeClient() }, { skipTools: ["mytool"] })
+  const big = "a".repeat(600)
+  // Kullanıcının girdisi çalışır...
+  for (const tool of ["mytool"]) {
+    const t = { callID: `u-${tool}`, tool, args: {} }
+    await plugin["tool.execute.before"](t)
+    const output = { output: big }
+    await plugin["tool.execute.after"](t, output)
+    assert.equal(output.output, big, tool)
+  }
+  // ...ve default korumalar (read + MCP) hâlâ durur.
+  for (const tool of ["read", "bash_safe", "opencode-mcp-bash-tools_bash_raw"]) {
+    const t = { callID: `u-${tool}`, tool, args: {} }
+    await plugin["tool.execute.before"](t)
+    const output = { output: big }
+    await plugin["tool.execute.after"](t, output)
+    assert.equal(output.output, big, tool)
+  }
+})
+
 test("context-saver: first prune in session uses long marker, second uses short", async () => {
   const plugin = await ToolCompactPlugin({ client: fakeClient() }, {})
   const big = "y".repeat(5000)
@@ -128,12 +176,14 @@ test("context-saver: system.transform injects disclosure once", async () => {
   await plugin["experimental.chat.system.transform"]({}, output)
   assert.equal(output.system.length, 2)
   assert.ok(output.system[1].includes("[context-saver]"))
-  // MCP-era disclosure (KD-2026-09-05-mcp-bypass): per-call flag'ler schema
-  // yoluyla olu; bypass yolu bash_safe/bash_raw. Eski "no_prune=true" /
-  // "enabled:false" beklentisi stale (TASK-109 sonrasi metin degisti).
+  // MCP-era disclosure (KD-2026-09-05-mcp-bypass): bypass yolu bash_safe/bash_raw.
+  // 2026-09-10 düzeltme: "NOT honored" iddiası YANLIŞTI — shouldSkipForArgs
+  // args içindeki skipWhenContains'i honor ediyor. Disclosure artık doğru
+  // kapsamı söyler: native bash prune, read/grep/glob asla prune değil.
   assert.ok(output.system[1].includes("bash_safe"))
   assert.ok(output.system[1].includes("bash_raw"))
-  assert.ok(output.system[1].includes("NOT honored"))
+  assert.ok(output.system[1].includes("#no-prune"))
+  assert.ok(output.system[1].includes("NEVER pruned"))
 })
 
 test("context-saver: system.transform skips when disclosure already present", async () => {

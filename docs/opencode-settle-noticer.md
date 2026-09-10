@@ -21,6 +21,11 @@ yolu kodlar: **ajan bir dahaki temasta kaçırmaz**.
   `[sn] settled: <name> <EVENT> (exit=<code>) — <detail> [<statusPath>]`
   ve `<name>.notified` işaretle (bir final bir kez; aynı adla YENİ
   final → ts/event farklı → tekrar bildirilir).
+- Bayatlık (TASK-131, monitör-ölümü şüphesi): son olay final-dışı ve yaşı
+  `staleAfterMs`'i aşarsa `[sn] stale: <name> son olay <EVENT> <yaş> önce
+  (monitör sessiz — final yok) [<statusPath>]` ekle ve
+  `<name>.stale-notified` işaretle (stale başına bir kez; yeni olay
+  işareti sıfırlar). Finaller bu dala girmez (settle yolu onundur).
 - `experimental.chat.system.transform`: disclosure (sentinel idempotent).
   Oturum açılışında bekleyen settlelari disclosure metnine gömer
   (`Pending settles: <ad> <OLAY> (exit=)` — snapshot, salt okunur).
@@ -36,6 +41,7 @@ yolu kodlar: **ajan bir dahaki temasta kaçırmaz**.
 | `eventDirs` | yok | Açık liste; yoksa `$BUILD_MON_DIR` + `<cwd>/tmp/build-mon` (var olanlar) |
 | `maxFiles` | `20` | Dizin başına taranan status dosyası üst sınırı |
 | `skipWhenContains` | `#no-settle-notice` | Argümanlarda geçerse o çağrıda atla |
+| `staleAfterMs` | `180000` (180sn = 3 × heartbeat) | Finalsız son-olay bu yaşı aşarsa `[sn] stale:`; geçersizde default (fail-soft) |
 
 ## Dürüst sınırlar
 

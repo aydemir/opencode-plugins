@@ -91,7 +91,7 @@ Marker çıktının **sonuna** eklenir (başa eklenirse `<n>\t` pattern bozulur)
 
 ## MCP Entegrasyonu
 
-`opencode-mcp-bash-tools` (TASK-109) ile tamamlayıcı:
+`bash` (eski ad: opencode-mcp-bash-tools, TASK-109) ile tamamlayıcı:
 
 - `bash_safe` → kırpma marker'lı
 - `bash_raw` → ham çıktı (kırpma yok)

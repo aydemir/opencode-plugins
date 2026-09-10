@@ -12,7 +12,9 @@
 import { execFile } from "node:child_process"
 
 export const HBMON_INSTALL_HINT =
-  "hbmon bulunamadı. Kurulum: cargo install --git https://github.com/aydemir/hbmon (veya HBMON_BIN=/yol/hbmon)"
+  "hbmon bulunamadı. Kurulum (git — crates.io yayını stabil sürüme kadar " +
+  "bilinçli ertelendi): cargo install --git https://github.com/aydemir/hbmon " +
+  "(veya HBMON_BIN=/yol/hbmon)"
 
 /** İkilik çözümleme: boş-olmayan HBMON_BIN, yoksa PATH'teki `hbmon`. */
 export function resolveHbmonBin(env: NodeJS.ProcessEnv = process.env): string {

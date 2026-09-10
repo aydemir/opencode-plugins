@@ -116,6 +116,7 @@ function hbmonMissing() {
 if (!HBMON || hbmonMissing()) {
   process.stderr.write(`hbmon-build-mon: hbmon bulunamadı (HBMON_BIN=${HBMON})\n`);
   process.stderr.write("  cargo install --git https://github.com/aydemir/hbmon\n");
+  process.stderr.write("  (crates.io yayını stabil sürüme kadar bilinçli ertelendi — tek kaynak git)\n");
   process.exit(2);
 }
 

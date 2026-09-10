@@ -50,7 +50,7 @@ const HbmonPlugin: Plugin = async (_input, _options) => {
     tool: {
       hbmon_watch: tool({
         description:
-          "Build komutunu hbmon ile arka planda izle, hemen dön. Dönen sock ile hbmon_wait/hbmon_status çağır. Uzun derlemelerde bash'te bloklama.",
+          "Uzun build (>2dk) turn-içi takip: komutu hbmon ile arka planda başlat, hemen dön (bash'te bloklama). Dönen sock'u sonraki hbmon_wait/hbmon_status çağrılarına ver. Burada bekleyeceksen bunu seç (next-contact için build-mon kullan). Argv dizisi ver, shell yok.",
         args: {
           command: tool.schema
             .array(tool.schema.string())
@@ -79,7 +79,7 @@ const HbmonPlugin: Plugin = async (_input, _options) => {
 
       hbmon_wait: tool({
         description:
-          "İzlenen build bitene (veya until sinyaline) kadar bloklanarak bekle. Polling yapma — bu çağrı uyandırır. Gateway tavanına takılırsa tekrar çağır.",
+          "Sock'lu build bitene kadar bloklanarak bekle (polling YOK — bu çağrı uyandırır). Daemon tavanı default 50s (gateway ~60s altı); `timeout (hâlâ çalışıyor)` dönerse aynı sock ile tekrar çağır. Erken-dönüş için until: done,failed,dep_missing,stall_suspect,oom_suspect,timeout (virgüllü). dep_missing dönerse bekleme, log'a bak.",
         args: {
           sock: tool.schema.string().describe("hbmon_watch'tan dönen sock"),
           timeout: tool.schema
@@ -103,7 +103,7 @@ const HbmonPlugin: Plugin = async (_input, _options) => {
       }),
 
       hbmon_status: tool({
-        description: "İzlenen build'in anlık özeti (ağaç+metrik+saglik). Hızlı yoklama; beklemez.",
+        description: "Sock'lu build'in anlık özeti (ağaç+metrik+sağlık). Hızlı yoklama, beklemez. hbmon_wait `woke_on=... state=running/stalled` dönerse detaya bununla bak.",
         args: {
           sock: tool.schema.string().describe("hbmon_watch'tan dönen sock"),
         },

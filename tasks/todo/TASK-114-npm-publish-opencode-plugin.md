@@ -21,8 +21,8 @@ yol yazma kafa karışıklığını ortadan kaldırır.
 
 ## Kapsam
 
-- `plugins/server.ts` barrel: üç factory re-export (SADECE function)
-- `package.json`: `exports["./server"]`, `private` kaldırma, repository
+- `plugins/server.ts` barrel: altı factory re-export (SADECE function)
+- `package.json`: `exports["./server"]` + 6 per-plugin path, `private` yok, repository
 - `tests/server-entry.test.mjs`: entry shape + instantiate
 - README + PROJECT_MAP + index.json distribution kaydı
 - Gerçek `npm publish` (npm auth kullanıcıda — BLOKER)
@@ -57,11 +57,31 @@ yol yazma kafa karışıklığını ortadan kaldırır.
 - [ ] Gerçek npm publish (auth blokeri)
 - [ ] Gerçek registry'den kurulum teyidi
 
+## 2026-09-10 re-verify (publish öncesi son kontrol)
+
+- [x] `npm run build` temiz; `server-entry.test.mjs` 3/3
+- [x] Manifest: `private` yok, `exports` = `./server` + 6 per-plugin path,
+  `files` = dist/plugins/docs/scripts (yeni dosyalar dahil:
+  `lib/build-tracker-disclosure.*`, `scripts/setup.mjs`, `README.tr.md`)
+- [x] `npm pack --dry-run`: 142 dosya, 143.9 kB; server.js + mcp server.js
+  + setup.mjs + iki README pakette
+- [x] Registry: `opencode-plugins` adı BOŞTA (404) — ilk publish `0.1.0`
+- [ ] Gerçek publish — SADECE kullanıcı (auth blokeri):
+  ```bash
+  npm adduser            # bir kez (token ~/.npmrc'ye yazılır)
+  npm publish            # repo kökünde; 0.1.0 + README.md vitrin
+  ```
+- [ ] Publish sonrası teyit (auth sonrası ajan devralır):
+  ```bash
+  npm view opencode-plugins version   # 0.1.0 görmeli
+  opencode plugin -g opencode-plugins # gerçek registry akışı
+  ```
+
 ## Notlar / Kararlar
 
 - Sözleşme: `exports["./server"] | exports["./tui"] | main | oc-themes`.
   Boot `Zy()`: Object.values iterate, aynı değer dedupe, non-function
-  → tüm modül düşer. Üç factory AYNI spec options objesini alır
+  → tüm modül düşer. Altı factory AYNI spec options objesini alır
   (`pluginOptions["opencode-plugins"]`); `enabled:false` ortak kill-switch.
 - Tarball-path spec'te opencode manifest bug'ı var (spec dizininde
   package.json arar) — registry/dir spec kullanılmalı.

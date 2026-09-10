@@ -9,21 +9,30 @@
 
 import test from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
   NOTICE_SENTINEL,
+  STALE_SENTINEL,
   DISCLOSURE_SENTINEL,
+  DISCLOSURE_TEXT,
   DEFAULT_SKIP_CONTAINS,
+  DEFAULT_STALE_AFTER_MS,
   parseStatusFile,
+  parseLastEvent,
   isFinal,
   notifiedPath,
   isNotified,
   markNotified,
+  markStaleNotified,
+  isStaleNotified,
+  staleNotifiedPath,
   resolveEventDirs,
   scanSettled,
+  scanStale,
   buildNotice,
+  buildStaleNotice,
   buildPendingSuffix,
 } from "../dist/plugins/lib/settle-notice.js"
 import settleFactory from "../dist/plugins/opencode-settle-noticer.js"
@@ -268,4 +277,135 @@ test("transform: bekleyen yoksa statik metin (ek yok)", async () => {
   } finally {
     rmSync(d, { recursive: true, force: true })
   }
+})
+
+test("disclosure: hbmon kapsam-dışı cümlesi (TASK-129)", () => {
+  assert.ok(DISCLOSURE_TEXT.includes("hbmon-watched builds are NOT covered"), "scope sentence")
+  assert.ok(DISCLOSURE_TEXT.includes("hbmon_wait"), "alternative pointer")
+})
+
+// --- TASK-131 stale scan ---
+
+function staleFixture(files) {
+  // files: [{name, event, ts, exit?}] → tmp event dir (çağıran temizler).
+  const dir = mkdtempSync(join(tmpdir(), "sn-stale-"))
+  for (const f of files) {
+    const rec = { name: f.name, event: f.event, ts: f.ts }
+    if (f.exit !== undefined) rec.exit = f.exit
+    writeFileSync(join(dir, `${f.name}.status.json`), JSON.stringify(rec))
+  }
+  return dir
+}
+
+const oldTs = (msAgo) => new Date(Date.now() - msAgo).toISOString()
+
+test("scanStale: old non-final found, fresh ignored", () => {
+  const dir = staleFixture([
+    { name: "dead", event: "HEARTBEAT", ts: oldTs(600000) },
+    { name: "live", event: "HEARTBEAT", ts: oldTs(10000) },
+  ])
+  try {
+    const found = scanStale([dir], DEFAULT_STALE_AFTER_MS)
+    assert.equal(found.map((r) => r.name).join(","), "dead")
+    assert.equal(found[0].event, "HEARTBEAT")
+    assert.ok(found[0].ageMs > DEFAULT_STALE_AFTER_MS)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("scanStale: finals never stale (settle path owns them)", () => {
+  const dir = staleFixture([
+    { name: "fin", event: "FAILED", ts: oldTs(3600000), exit: 1 },
+  ])
+  try {
+    assert.deepEqual(scanStale([dir], 1000), [])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("scanStale: invalid ts skipped gracefully", () => {
+  const dir = staleFixture([{ name: "bad", event: "HEARTBEAT", ts: "not-a-date" }])
+  try {
+    assert.deepEqual(scanStale([dir], 1000), [])
+    assert.equal(parseLastEvent(join(dir, "bad.status.json")), null)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("scanStale: once-only marker, new event re-arms", () => {
+  const dir = mkdtempSync(join(tmpdir(), "sn-stale-"))
+  try {
+    const ts1 = new Date(Date.now() - 600000).toISOString()
+    const rec1 = { name: "flap", event: "HEARTBEAT", ts: ts1 }
+    writeFileSync(join(dir, "flap.status.json"), JSON.stringify(rec1))
+    assert.equal(scanStale([dir], 1000).length, 1)
+    markStaleNotified(dir, rec1)
+    assert.ok(isStaleNotified(dir, rec1))
+    assert.deepEqual(scanStale([dir], 1000), [])
+    // Yeni olay (yeni ts) işareti sıfırlar — ayrı reset mantığı yok:
+    const ts2 = new Date(Date.now() - 500000).toISOString()
+    writeFileSync(join(dir, "flap.status.json"), JSON.stringify({ name: "flap", event: "HEARTBEAT", ts: ts2 }))
+    const found2 = scanStale([dir], 1000)
+    assert.equal(found2.length, 1)
+    assert.equal(found2[0].ts, ts2)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("scanStale: custom threshold respected", () => {
+  const dir = staleFixture([{ name: "mid", event: "STARTED", ts: oldTs(5000) }])
+  try {
+    assert.equal(scanStale([dir], 3600000).length, 0)
+    assert.equal(scanStale([dir], 1000).length, 1)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("buildStaleNotice: format", () => {
+  const out = buildStaleNotice([
+    { name: "dead", event: "HEARTBEAT", ts: oldTs(65000), ageMs: 65000, statusPath: "/e/dead.status.json" },
+  ])
+  assert.ok(out.includes(STALE_SENTINEL), "sentinel")
+  assert.ok(out.includes("dead"), "name")
+  assert.ok(out.includes("HEARTBEAT"), "event")
+  assert.ok(out.includes("1dk"), "age")
+  assert.ok(out.includes("/e/dead.status.json"), "path")
+})
+
+test("hook: stale notice appended once, second call silent (TASK-131)", async () => {
+  const dir = staleFixture([{ name: "gone", event: "HEARTBEAT", ts: oldTs(600000) }])
+  try {
+    const inst = await settleFactory({ config: { eventDirs: [dir] } }, {})
+    const out1 = { output: "ok" }
+    await inst["tool.execute.after"]({ callID: "s1", tool: "bash", args: {} }, out1)
+    assert.ok(out1.output.includes(STALE_SENTINEL), "stale appended")
+    assert.ok(out1.output.includes("gone"), "name in notice")
+    const out2 = { output: "ok" }
+    await inst["tool.execute.after"]({ callID: "s2", tool: "bash", args: {} }, out2)
+    assert.ok(!out2.output.includes(STALE_SENTINEL), "once-only")
+    assert.ok(existsSync(staleNotifiedPath(dir, "gone")), "marker file")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("hook: invalid staleAfterMs falls back to default (fail-soft)", async () => {
+  const dir = staleFixture([{ name: "x", event: "HEARTBEAT", ts: oldTs(10000) }])
+  try {
+    const inst = await settleFactory({ config: { eventDirs: [dir], staleAfterMs: -5 } }, {})
+    const out = { output: "ok" }
+    await inst["tool.execute.after"]({ callID: "s3", tool: "bash", args: {} }, out)
+    assert.ok(!out.output.includes(STALE_SENTINEL), "10sn < 180sn default")
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("disclosure: stale clause present (TASK-131)", () => {
+  assert.ok(DISCLOSURE_TEXT.includes("[sn] stale:"), "stale pointer")
 })

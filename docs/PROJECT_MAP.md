@@ -57,6 +57,12 @@ Public API:
 - `BuildHooksPlugin: Plugin` — ana export
 - `default` — `BuildHooksPlugin` (alias)
 
+Config: `thresholdMs` (120s), `verbose`, `extraErrorPatterns` (additive, TASK-127).
+Komut tanıma: `getCommandFromArgs` array-join (hbmon argv) + test-runner
+tokenları (`pytest`/`jest`/`vitest`, `python -m`; çıplak `node`/`python` yok, TASK-128).
+`experimental.chat.system.transform` — mini-disclosure (`[build-tracker]` sentinel, TASK-129).
+Sabitler: `plugins/lib/build-tracker-disclosure.ts`.
+
 (Detaylar `docs/opencode-build-tracker.md` ve kaynak dosyada.)
 
 ### `plugins/opencode-truncation-noticer.ts` (TASK-111)
@@ -83,7 +89,7 @@ Config (`TruncationNoticeConfig`):
 
 Tamamlayıcı mimari:
 - `opencode-context-saver` → prune (kırpma)
-- `opencode-mcp-bash-tools` → bash_safe (marker'lı) + bash_raw (ham)
+- `bash` → bash_safe (marker'lı) + bash_raw (ham)
 - **`opencode-truncation-noticer` → native read'e "devamı var" marker'ı**
 - **`opencode-cpu-liveness` → uzun derlemede `cpu-liveness-agent` yolunu deklare eder**
 - **`opencode-settle-noticer` → biten build'i sorulmadan bildirir (next-contact)**
@@ -249,8 +255,8 @@ Marker'da escape hint: `For raw output, call bash_raw with the same
 command.` — schema kontrollü, çalışan bypass.
 
 **Plugin etkileşimi (TASK-110):** Plugin `tool.execute.after` hook'unda
-MCP tool adlarını (`opencode-mcp-bash-tools_bash_safe`,
-`opencode-mcp-bash-tools_bash_raw`) atlar — MCP zaten kendi
+MCP tool adlarını suffix kuralıyla (`bash_safe`/`bash_raw` girdisi
+`<herhangi-key>_bash_safe/_bash_raw` adını yakalar) atlar — MCP zaten kendi
 kararını veriyor, ikinci kırpma katmanı olmaz.
 
 **opencode.jsonc kaydı (kullanıcı onayıyla):**
@@ -258,7 +264,7 @@ kararını veriyor, ikinci kırpma katmanı olmaz.
 ```jsonc
 {
   "mcp": {
-    "opencode-mcp-bash-tools": {
+    "bash": {
       "type": "local",
       "command": ["node", "dist/plugins/mcp-bash-tools/server.js"],
       "enabled": true
@@ -325,7 +331,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
 | `scripts/build-mon.mjs` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`readTreeCpuTime`: pid + canlı torunlar); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Rotasyon (TASK-122): `<ad>.log` PASSED→sil, fail→`<ad>.log.<olay>-<ts>` arşiv; `events.jsonl` audit-trail, boyut/yaş rotasyonu (`--rotate-size/days/keep`). Node portu (TASK-127, bash/python3 yok); legacy `.sh` `scripts/archive/`'de. Doc: `docs/build-mon.md` |
-| `scripts/setup.mjs` (`npm run setup`) | Tamset kurulum: artifact doğrulama (`dist/` yoksa `npm run build` ister) + canlı config'e `plugin:"opencode-plugins"` ve `mcp.opencode-mcp-bash-tools` bloğunu merge eder (mutlak server.js yoluyla, `.bak.<ts>` yedekli) + script seti kontrolü. Bayraksız yazmaz (exit 2), `--dry-run`/`--check` CI-dostu. Testler: `tests/setup.test.mjs` |
+| `scripts/setup.mjs` (`npm run setup`) | Tamset kurulum: artifact doğrulama (`dist/` yoksa `npm run build` ister) + canlı config'e `plugin:"opencode-plugins"` ve `mcp.bash` bloğunu merge eder (mutlak server.js yoluyla, `.bak.<ts>` yedekli) + script seti kontrolü. Bayraksız yazmaz (exit 2), `--dry-run`/`--check` CI-dostu. Testler: `tests/setup.test.mjs` |
 
 ## Build Artifact — `dist/`
 

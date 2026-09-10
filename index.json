@@ -239,6 +239,36 @@
       "id": "KD-2026-09-09-node-port",
       "date": "2026-09-09",
       "summary": "TASK-127: build-mon + hbmon-build-mon adapterlari Node portu (scripts/*.mjs). Sozlesme birebir (banner/events/status/exit haritasi/FAIL_SIG/rotasyon); treeKill+readTreeCpuTime reuse, python3 gereksinimi kalkti. .sh scripts/archive/de (git mv). Testler bash-simsiz: 9/9 + 5/5 (fake Node, PATH override yok)."
+    },
+    {
+      "id": "KD-2026-09-10-disclosure-accuracy",
+      "date": "2026-09-10",
+      "summary": "TASK-129: LLM disclosure denetimi 3 paket — cpu-liveness builder'a ioGraceRounds cumlesi (drift guard testi), build-tracker mini-disclosure (~45 token, lib/build-tracker-disclosure.ts + sentinel test), sn hbmon kapsam-disi cumlesi. Suite 97+43 yesil, tsc temiz."
+    },
+    {
+      "id": "KD-2026-09-10-cmd-recognition",
+      "date": "2026-09-10",
+      "summary": "TASK-128: tracker korlugu kapandi — getCommandFromArgs array-join (hbmon argv), BUILD_TOKENS'e pytest/jest/vitest + PHRASES'e python -m/npx jest/npx vitest (ciplak node/python yok, gurultu guard testli); resolveFilePath taramasi temiz. 125 test yesil."
+    },
+    {
+      "id": "KD-2026-09-10-setup",
+      "date": "2026-09-10",
+      "summary": "TASK-130: olu setup akisi (a) ile kapandi — scripts/setup.mjs (artifact check + mcp.bash merge + 6 plugin + script seti; --yes/--dry-run/--check, .bak yedekli, pluginOptions korunur). tests/setup.test.mjs 14/14. npm ile tam kurulum calisiyor."
+    },
+    {
+      "id": "KD-2026-09-10-io-blindness",
+      "date": "2026-09-10",
+      "summary": "TASK-121 karar (b): Disk-I/O korlugu YOK — bulk fazlar ~40-75 tick/sn sys CPU yakar (2b: sessiz 8GB completed, false-stall yok); pid io sayaclari ayni syscall'da arttigi icin bagimsiz sinyal vermez. Kod degisikligi yok, M1 grace yeterli."
+    },
+    {
+      "id": "KD-2026-09-10-monitor-death",
+      "date": "2026-09-10",
+      "summary": "TASK-125 karar (a-lite): SIGKILL kanitlandi (final yok, yetim sessiz exit, notice ateslenemez). Dis watchdog reddedildi (regresyon); bayatlik sezgisi settle-noticer'a eklenecek → TASK-131."
+    },
+    {
+      "id": "KD-2026-09-10-stale-notice",
+      "date": "2026-09-10",
+      "summary": "TASK-131: settle-noticer bayatlik sezgisi — scanStale (finalsiz+yasli, eşik 180sn=3x heartbeat) + .stale-notified (ts/event, re-arm) + disclosure cumlesi. Canli prova TASK-125 dizininde. 148 test yesil."
     }
   ],
   "mcp_servers": [

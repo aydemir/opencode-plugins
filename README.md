@@ -1,69 +1,56 @@
 # opencode-plugins
 
-> v0.1.0 — OpenCode için eklenti koleksiyonu
+**English** | [Türkçe](README.tr.md)
 
-OpenCode için eklenti koleksiyonu. Altı eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları, **`opencode-truncation-noticer`** read-tool kırpma bildirimi, **`opencode-cpu-liveness`** CPU-izleme disclosure'ı, **`opencode-settle-noticer`** biten build'i sorulmadan bildirme ve **`opencode-hbmon`** hbmon custom tool'ları (turn-içi ajan wakeup). Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`) ve script seti **`scripts/build-mon.mjs`** (push/event build monitörü) + **`scripts/cpu-liveness-probe/`**.
+> v0.1.0 — Plugin collection for OpenCode
 
-> Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
+A plugin collection for OpenCode. It contains six plugins — **`opencode-context-saver` (DHS PTC-mode)** for context savings, **`opencode-build-tracker`** build lifecycle hooks, **`opencode-truncation-noticer`** read-tool truncation notices, **`opencode-cpu-liveness`** CPU-monitoring disclosure, **`opencode-settle-noticer`** ask-free finished-build notification, and **`opencode-hbmon`** hbmon custom tools (in-turn agent wakeup). Plus MCP server **`bash`** (`bash_safe`/`bash_raw` TUI names; in-server `safe`/`raw`) and script set **`scripts/build-mon.mjs`** (push/event build monitor) + **`scripts/cpu-liveness-probe/`**.
 
-## Eklentiler
+> Source: copied from the live setup under `/root/.config/opencode/plugins/`. Code is preserved as-is, no extra behavior is added.
 
-| Eklenti | Dosya | Amaç | Tasarruf |
-|---------|-------|------|----------|
-| **opencode-context-saver** | `plugins/opencode-context-saver.ts` | Tool çıktılarını sıkıştırır, gereksiz context'i keser | Ölçüldü: **97.5%** (80233 → 1997 chars, 3 dosya + chat özeti) |
-| **opencode-build-tracker** | `plugins/opencode-build-tracker.ts` | Build komutlarını algılar, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` kancaları | — |
-| **opencode-truncation-noticer** | `plugins/opencode-truncation-noticer.ts` | Native read sessiz kırpmasına `devamı var` marker'ı | — |
-| **opencode-cpu-liveness** | `plugins/opencode-cpu-liveness.ts` | Uzun derlemede `cpu-liveness-agent` yolunu deklare eder (disclosure-only) | — |
-| **opencode-settle-noticer** | `plugins/opencode-settle-noticer.ts` | Biten build-mon derlemesini sorulmadan bildirir (next-contact, `.notified` ile tek seferlik) | — |
-| **opencode-hbmon** | `plugins/opencode-hbmon.ts` | hbmon custom tool'ları (`hbmon_watch`/`hbmon_wait`/`hbmon_status`): turn-içi ajan wakeup, polling yok | — |
-| **opencode-mcp-bash-tools** (MCP) | `plugins/mcp-bash-tools/` | `bash_safe` (otomatik kırpılan) + `bash_raw` (tam çıktı) | — |
+## Plugins
 
-| Script | Dosya | Amaç |
-|--------|-------|------|
-| **build-mon** | `scripts/build-mon.mjs` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır, `events.jsonl` + banner + log rotasyonu) |
-| **cpu-liveness-probe** | `scripts/cpu-liveness-probe/` | Build process CPU izleme (probe + tree-kill + agent) |
+| Plugin | File | Purpose | Savings |
+|--------|------|---------|---------|
+| **opencode-context-saver** | `plugins/opencode-context-saver.ts` | Compresses tool outputs, cuts needless context | Measured: **97.5%** (80233 → 1997 chars, 3 files + chat summary) |
+| **opencode-build-tracker** | `plugins/opencode-build-tracker.ts` | Detects build commands, `onBuildStart / onBuildSuccess / onBuildFailure / onThresholdExceeded` hooks | — |
+| **opencode-truncation-noticer** | `plugins/opencode-truncation-noticer.ts` | `more-lines` marker for silent native-read truncation | — |
+| **opencode-cpu-liveness** | `plugins/opencode-cpu-liveness.ts` | Declares the `cpu-liveness-agent` path for long builds (disclosure-only) | — |
+| **opencode-settle-noticer** | `plugins/opencode-settle-noticer.ts` | Reports finished build-mon builds unasked (next-contact, one-shot via `.notified`) | — |
+| **opencode-hbmon** | `plugins/opencode-hbmon.ts` | hbmon custom tools (`hbmon_watch`/`hbmon_wait`/`hbmon_status`): in-turn agent wakeup, no polling | — |
+| **bash** (MCP) | `plugins/mcp-bash-tools/` | `bash_safe` (auto-pruned) + `bash_raw` (full output) | — |
 
-Detaylı doküman: `docs/opencode-context-saver.md`, `docs/opencode-build-tracker.md`, `docs/opencode-truncation-noticer.md`, `docs/opencode-cpu-liveness.md`, `docs/opencode-settle-noticer.md`, `docs/opencode-hbmon.md` ve `docs/build-mon.md`
+| Script | File | Purpose |
+|--------|------|---------|
+| **build-mon** | `scripts/build-mon.mjs` | Push/event build monitor (closes the opencode-bm poll-only gap; wrapped with `bm_start`, `events.jsonl` + banner + log rotation) |
+| **cpu-liveness-probe** | `scripts/cpu-liveness-probe/` | Build-process CPU monitoring (probe + tree-kill + agent) |
 
-## Kurulum
+Detailed docs (in Turkish): `docs/opencode-context-saver.md`, `docs/opencode-build-tracker.md`, `docs/opencode-truncation-noticer.md`, `docs/opencode-cpu-liveness.md`, `docs/opencode-settle-noticer.md`, `docs/opencode-hbmon.md` and `docs/build-mon.md`
 
-### 0) Seçenek C — `opencode plugin` + tamset setup (önerilen)
+## Installation
+
+### 0) Option C — `opencode plugin` + full setup (recommended)
 
 ```bash
 opencode plugin -g opencode-plugins
 npm install && npm run build && npm run setup -- --yes
 ```
 
-İlk komut paketi kurar ve config'i günceller; beş plugin de
-`exports["./server"]` üzerinden yüklenir. İkinci komut manuel
-yerleştirmeyi ortadan kaldırır: `dist/` artifact'lerini doğrular,
-canlı config'e `mcp.opencode-mcp-bash-tools` bloğunu (mutlak
-`server.js` yoluyla, `.bak` yedekli) ve eksikse `plugin`
-girdisini ekler, script setini (`build-mon.mjs`,
-`cpu-liveness-probe/`) kontrol eder. Önce plansız yazmaz:
-`npm run setup -- --dry-run` ile önizle. Yapılandırma:
-`pluginOptions["opencode-plugins"]` (beşine ortak; `enabled:false`
-beşini birden kapatır).
-Uzun derlemeler için `scripts/build-mon.mjs` (npm paketine dahildir) +
-`opencode-settle-noticer` kombinasyonu kullanılır (detay:
-`docs/build-mon.md`, `docs/opencode-settle-noticer.md`).
+The first command installs the package and updates the config; all six plugins load via `exports["./server"]`. The second command removes manual placement: it verifies `dist/` artifacts, merges the `mcp.bash` block into the live config (absolute `server.js` path, `.bak` backup) plus the `plugin` entry if missing, and checks the script set (`build-mon.mjs`, `cpu-liveness-probe/`). It never writes unplanned: preview with `npm run setup -- --dry-run` first. Configuration: `pluginOptions["opencode-plugins"]` (shared by all six; `enabled:false` turns them all off at once).
+For long builds, use `scripts/build-mon.mjs` (shipped in the npm package) + `opencode-settle-noticer` combined (details: `docs/build-mon.md`, `docs/opencode-settle-noticer.md`).
 
-### 1) Seçenek A — Git submodule / kopyala
+### 1) Option A — Git submodule / copy
 
 ```bash
 git clone https://github.com/<org>/opencode-plugins.git
-# Plugin'ler ./lib/*.ts import eder — tek .ts kopyalama ÇALIŞMAZ.
-# plugins/ dizinini bütün olarak kopyala:
+# Plugins import ./lib/*.ts — copying a single .ts does NOT work.
+# Copy the plugins/ directory as a whole:
 cp -r opencode-plugins/plugins ~/.config/opencode/plugins
 ```
 
-> ⚠️ Çift-yükleme tuzağı: opencode `~/.config/opencode/plugins/*.ts`
-> dosyalarını OTOMATİK tarar ve config'deki `plugin` listesine EKLER.
-> Repo kopyası + eski kopya aynı anda durursa hook'lar çift çalışır
-> (2026-09-05 vakası: 6 spec → 5 instance). Ya Seçenek C'yi kullan ya
-> da eski kopyaları sil, ikisini karıştırma.
+> ⚠️ Double-loading trap: opencode AUTOMATICALLY scans `~/.config/opencode/plugins/*.ts` and ADDS them to the `plugin` list in config. If a repo copy and an old copy sit side by side, hooks run twice (2026-09-05 incident: 6 specs → 5 instances). Either use Option C or delete old copies — don't mix.
 
-### 2) Seçenek B — Doğrudan opencode.jsonc ile
+### 2) Option B — Directly via opencode.jsonc
 
 `~/.config/opencode/opencode.jsonc`:
 
@@ -78,32 +65,31 @@ cp -r opencode-plugins/plugins ~/.config/opencode/plugins
 }
 ```
 
-Örnek: `examples/opencode.jsonc`
+Example: `examples/opencode.jsonc`
 
-### 3) Derleme (opsiyonel)
+### 3) Build (optional)
 
-Eklentiler TypeScript olarak doğrudan yüklenir. `dist/` repoda tutulmaz —
-herkes kendi ortamında derler (`.gitignore`):
+Plugins load directly as TypeScript. `dist/` is not kept in the repo — everyone builds in their own environment (`.gitignore`):
 
 ```bash
 npm install && npm run build
-# veya bun ile (dogurlandi: bun 1.4.0, 66/66 test):
+# or with bun (verified: bun 1.4.0, 66/66 tests):
 bun install && bun run build
 ```
 
-`@opencode-ai/plugin` `1.18.21` ile test edildi.
+Tested with `@opencode-ai/plugin` `1.18.21`.
 
-## Hızlı Doğrulama
+## Quick Verification
 
 ```bash
-# opencode-context-saver regex'i manuel test et
+# manually test the opencode-context-saver regex
 node -e "console.log(/\berror\b|\bfailed\b/i.test('error: foo'))"
 
-# 3 dosya ile tasarruf ölçümü (repo içindeki ölçüm script'i ile aynı mantık)
-# Bkz. docs/opencode-context-saver.md#ölçüm
+# savings measurement over 3 files (same logic as the repo's measurement script)
+# See docs/opencode-context-saver.md#ölçüm
 ```
 
-## Repo Yapısı
+## Repo Layout
 
 ```
 opencode-plugins/
@@ -112,19 +98,19 @@ opencode-plugins/
 │   ├── opencode-build-tracker.ts
 │   ├── opencode-truncation-noticer.ts
 │   ├── opencode-cpu-liveness.ts      # disclosure-only
-│   ├── opencode-settle-noticer.ts    # next-contact settle bildirimi
-│   ├── opencode-hbmon.ts             # hbmon custom tool'ları (turn-içi wakeup)
-│   ├── server.ts                     # npm paketi entry (exports["./server"], TASK-114)
-│   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice, settle-notice, cpu-liveness-disclosure, hbmon-tools
+│   ├── opencode-settle-noticer.ts    # next-contact settle notices
+│   ├── opencode-hbmon.ts             # hbmon custom tools (in-turn wakeup)
+│   ├── server.ts                     # npm package entry (exports["./server"], TASK-114)
+│   ├── lib/                        # shared: prune, disclosure, raw-refill, truncation-notice, settle-notice, cpu-liveness-disclosure, hbmon-tools
 │   └── mcp-bash-tools/             # MCP server (bash_safe/bash_raw)
 ├── scripts/
-│   ├── build-mon.mjs                # push/event build monitörü (TASK-127 Node portu)
-│   ├── hbmon-build-mon.mjs          # build-mon sözleşmesi, hbmon motoru (TASK-127 Node portu)
-│   ├── archive/                    # legacy .sh portları (git mv, history korunur)
+│   ├── build-mon.mjs                # push/event build monitor (TASK-127 Node port)
+│   ├── hbmon-build-mon.mjs          # build-mon contract, hbmon engine (TASK-127 Node port)
+│   ├── archive/                    # legacy .sh ports (git mv, history preserved)
 │   ├── cpu-liveness-probe/         # probe + tree-kill + agent
-│   ├── timeout-kill-probe/         # TASK-115 regresyon bekçisi
-│   └── tui-live/                   # TASK-112 TUI canlı test
-├── docs/                           # plugin + build-mon + vaka yazıları
+│   ├── timeout-kill-probe/         # TASK-115 regression guard
+│   └── tui-live/                   # TASK-112 TUI live test
+├── docs/                           # plugin + build-mon + case writings (in Turkish)
 ├── examples/
 │   └── opencode.jsonc
 ├── tests/
@@ -133,37 +119,35 @@ opencode-plugins/
 └── LICENSE
 ```
 
-## Lisans
+## License
 
-MIT — `LICENSE` dosyasına bak.
+MIT — see `LICENSE`.
 
-## Geliştirme
+## Development
 
 ```bash
-npm ci               # bağımlılıkları kur (veya: bun install)
-npm run lint         # tsc --noEmit (tip kontrolü)
+npm ci               # install dependencies (or: bun install)
+npm run lint         # tsc --noEmit (typecheck)
 npm test             # build + node:test (tests/*.test.mjs)
 ```
 
-`npm test` arka arkaya `npm run build` ve `node --test tests/` çalıştırır.
-Testler `dist/` üretim çıktısını import eder — build güncel değilse testler
-yanlış negatif verebilir. CI gate: `.github/workflows/test.yml`.
+`npm test` runs `npm run build` and `node --test tests/` back to back. Tests import production output from `dist/` — if the build is stale, tests may give false negatives. CI gate: `.github/workflows/test.yml`.
 
-PR açmadan önce:
+Before opening a PR:
 
-1. `npm test` lokal yeşil olmalı
-2. `docs/` içindeki davranış sözleşmesi korunmalı (kırıcı API değişikliği yok)
-3. Yeni plugin davranışı için `tests/` altına `*.test.mjs` ekleyin
+1. `npm test` must be green locally
+2. The behavior contracts in `docs/` must hold (no breaking API changes)
+3. Add `*.test.mjs` under `tests/` for new plugin behavior
 
-## Katkı
+## Contributing
 
-PR'lar açıktır. Lütfen `docs/` içindeki davranış sözleşmesini bozmayın; her değişiklikte `npm test` çalıştırın.
+PRs are welcome. Please don't break the behavior contracts in `docs/`; run `npm test` with every change.
 
-## İlgili
+## Related
 
 - OpenCode docs: https://opencode.ai/docs
-- Canlı konfigürasyon: `~/.config/opencode/opencode.jsonc`
+- Live configuration: `~/.config/opencode/opencode.jsonc`
 
-## Yazılar
+## Writings (in Turkish)
 
-- [Oracle Problem — Canlı Doğrulama Disiplini](docs/oracle-problem-vaka-calismasi.md)
+- [Oracle Problem — Live Verification Discipline](docs/oracle-problem-vaka-calismasi.md)

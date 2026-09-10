@@ -32,6 +32,7 @@
 
 import { existsSync, readFileSync } from "node:fs"
 import type { Plugin } from "@opencode-ai/plugin"
+import { matchesSkipTools } from "./lib/prune.js"
 import {
   buildMarker,
   countLines,
@@ -44,6 +45,12 @@ import {
 
 interface TruncationNoticeConfig {
   enabled?: boolean
+  /**
+   * Hangi tool'lara marker eklenecek. Eşleşme suffix kuralıdır
+   * (`matchesSkipTools`, `lib/prune.ts`): `read` girdisi `read` ve
+   * `<herhangi-key>_read` adlarını yakalar — MCP key rename'lerine
+   * bağışık. Kullanıcı listesi default'larla birleştirilir.
+   */
   watchTools?: string[]
   lineSeparator?: string
   skipWhenContains?: string
@@ -60,6 +67,11 @@ const TruncationNoticePlugin: Plugin = async (_ctx) => {
   const userConfig =
     ((_ctx as { config?: TruncationNoticeConfig }).config ?? {}) as TruncationNoticeConfig
   const config = { ...DEFAULT_CONFIG, ...userConfig }
+  // watchTools merge edilir (replace değil): kullanıcı kendi girdisini
+  // eklediğinde default `read` koruması sessizce uçmaz. Dedupe'lu birleşim.
+  if (userConfig.watchTools !== undefined) {
+    config.watchTools = [...new Set([...DEFAULT_CONFIG.watchTools, ...userConfig.watchTools])]
+  }
 
   return {
     "experimental.chat.system.transform": async (_input, output) => {
@@ -70,7 +82,7 @@ const TruncationNoticePlugin: Plugin = async (_ctx) => {
 
     "tool.execute.after": async (t, output) => {
       if (!config.enabled) return
-      if (!config.watchTools.includes(t.tool)) return
+      if (!matchesSkipTools(t.tool, config.watchTools ?? [])) return
 
       const args = (t.args ?? {}) as Record<string, unknown>
       const skipMarker = config.skipWhenContains

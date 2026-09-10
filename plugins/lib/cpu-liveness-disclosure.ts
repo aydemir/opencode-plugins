@@ -17,7 +17,11 @@ import { fileURLToPath } from "node:url"
 export const CPU_LIVENESS_SENTINEL = "[cpu-liveness]"
 
 export const CPU_LIVENESS_TEXT =
-  "[cpu-liveness] Long builds: `npx cpu-liveness-agent -- <build cmd>` " +
+  "[cpu-liveness] WHEN: build expected >2min AND CPU-bound " +
+  "(compile/test/bundle). NOT for I/O-wait (download/install) — use " +
+  "hbmon_watch (turn-içi wait) or build-mon (next-contact notice) instead; " +
+  "this agent is only the second layer for CPU stall + --allow-kill. " +
+  "Long builds: `npx cpu-liveness-agent -- <build cmd>` " +
   "(e.g. `npx cpu-liveness-agent -- npm run build`). " +
   "Watches CPU time of pid + live descendants (includeTree default true); " +
   "stall = 3 consecutive delta=0 samples (interval 2000ms default). " +
@@ -52,7 +56,11 @@ export function resolveAgentPath(): string | null {
 export function buildCpuLivenessText(agentPath: string | null): string {
   if (!agentPath) return CPU_LIVENESS_TEXT
   return (
-    "[cpu-liveness] Long builds: `node " +
+    "[cpu-liveness] WHEN: build expected >2min AND CPU-bound " +
+    "(compile/test/bundle). NOT for I/O-wait (download/install) — use " +
+    "hbmon_watch (turn-içi wait) or build-mon (next-contact notice) instead; " +
+    "this agent is only the second layer for CPU stall + --allow-kill. " +
+    "Long builds: `node " +
     agentPath +
     " -- <build cmd>` " +
     "(e.g. `node " +
@@ -65,6 +73,7 @@ export function buildCpuLivenessText(agentPath: string | null): string {
     " --intervalMs=1000 --stallThreshold=10 --allow-kill --maxBudgetMs=600000 -- <cmd>`. " +
     "Cmd is joined + run via /bin/bash -c (quote args with spaces). " +
     "Exit: 0=clean, 1=stall w/o kill, 2=stall+killed (--allow-kill), 3=cmd failed, 4=budget exceeded (--maxBudgetMs). " +
+    "Fresh I/O keywords (Downloading/Locking/Waiting, last 15s) grant capped grace rounds (--ioGraceRounds, default 3; 0 disables). " +
     "Never auto-kills unless --allow-kill (I/O-wait false-positive risk). " +
     "Linux /proc verified; macOS/Windows readers UNTESTED. " +
     "To disable: \"pluginOptions.opencode-cpu-liveness.enabled\": false."

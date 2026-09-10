@@ -6,6 +6,7 @@ import {
   formatPruneMarker,
   formatShortPruneMarker,
   matchesRawPatterns,
+  matchesSkipTools,
   PRUNE_MARKER,
   pruneMiddle,
   resolvePruneBudget,
@@ -48,7 +49,12 @@ interface CompactConfig {
   /**
    * Bu tool adlarında prune uygulanmaz — kod okuma araçları için
    * LLM'in full output görmesi gerekir. Case-sensitive.
+   * Eşleşme suffix kuralıdır: girdi ya tam ad (`read`) ya da
+   * `_<girdi>` ile biten ad (`<herhangi-key>_bash_safe`) olmalı —
+   * MCP server key rename'lerine bağışık. Kullanıcı listesi
+   * default'larla birleştirilir (üzerine yazmaz).
    * Default: read/read_file/Read/grep/Grep/glob/Glob/list_dir/ListDir/search/Search
+   *   + bash_safe/bash_raw (MCP, TASK-110)
    */
   skipTools?: string[]
   /**
@@ -88,17 +94,25 @@ const DEFAULT_CONFIG: CompactConfig = {
   skipWhenContains: "#no-prune",
   skipTools: [
     "read", "read_file", "Read", "grep", "Grep", "glob", "Glob", "list_dir", "ListDir", "search", "Search",
-    // MCP server tools (TASK-110): opencode-mcp-bash-tools kendi kırpma/ham kararını veriyor.
+    // MCP server tools (TASK-110): bash server kendi kırpma/ham kararını veriyor.
     // Plugin bu tool'lara dokunmamalı — aksi halde iki kırpma katmanı üst üste biner.
-    // opencode tool adını `<server-name>_<tool-name>` olarak expose eder
-    // (örn. `opencode-mcp-bash-tools_bash_safe`); `mcp__server__tool` değil.
-    "opencode-mcp-bash-tools_bash_safe",
-    "opencode-mcp-bash-tools_bash_raw",
+    // Eşleşme `matchesSkipTools` ile suffix kuralıdır (`lib/prune.ts`): `bash_safe`
+    // girdisi `<herhangi-key>_bash_safe` adını yakalar, o yüzden server key
+    // rename'leri (örn. `opencode-mcp-bash-tools` → `bash`) listeyi bozmaz.
+    // Eski uzun adlar ayrıca listelenmez — suffix kuralı onları zaten kapsar.
+    "bash_safe",
+    "bash_raw",
   ],
 }
 
 function resolveConfig(raw: Partial<CompactConfig> = {}): CompactConfig {
   const cfg: CompactConfig = { ...DEFAULT_CONFIG, ...raw }
+  // skipTools merge edilir (replace değil): kullanıcı kendi girdisini
+  // eklediğinde default korumalar (read/grep/glob + MCP) sessizce uçmaz.
+  // Dedupe'lu birleşim; sıra: default'lar önce.
+  if (raw.skipTools !== undefined) {
+    cfg.skipTools = [...new Set([...(DEFAULT_CONFIG.skipTools ?? []), ...raw.skipTools])]
+  }
   // enabled=false ise prune uygulanmayacağı için budget kontrolü gereksiz.
   if (cfg.enabled !== false) {
     resolvePruneBudget({
@@ -208,7 +222,7 @@ const ToolCompactPlugin: Plugin = async ({ client }, options?: Record<string, un
         maxSummaryChars: config.maxSummaryChars,
       })
 
-      const skipByTool = (config.skipTools ?? []).includes(t.tool)
+      const skipByTool = matchesSkipTools(t.tool, config.skipTools ?? [])
       // Geçici kapatma sayacı (oturum başına): config ilk değeri verir,
       // per-call arg doldurur, her bypass bir harcar.
       const sid = t.sessionID ?? "unknown"

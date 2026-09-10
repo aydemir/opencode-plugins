@@ -16,9 +16,16 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 export const NOTICE_SENTINEL = "[sn] settled:"
+export const STALE_SENTINEL = "[sn] stale:"
 export const DISCLOSURE_SENTINEL = "[sn-disclosed]"
 export const DEFAULT_SKIP_CONTAINS = "#no-settle-notice"
 export const DEFAULT_MAX_FILES = 20
+/**
+ * Bayatlık eşiği default'u: 180sn = 3 × build-mon default heartbeat (60sn).
+ * Gerekçe: hook timer'la değil tool-sonucuyla çalışır (next-contact), yani
+ * gözlem zaten geç kalır; 2 aralıktan kısa eşik yavaş tick'te flap üretir.
+ */
+export const DEFAULT_STALE_AFTER_MS = 180000
 
 export const DISCLOSURE_TEXT =
   `[sn-disclosed] Settle Noticer is active. When a build monitored by ` +
@@ -32,7 +39,12 @@ export const DISCLOSURE_TEXT =
   `$BUILD_MON_DIR and <cwd>/tmp/build-mon (existing dirs only). ` +
   `Long builds default: scripts/build-mon.mjs --name <id> -- <cmd>; ` +
   `result in tmp/build-mon/<id>.status.json via this notice. ` +
+  `ON NOTICE: read the cited status.json path + its log file, then report ` +
+  `the verdict — do not re-poll events.jsonl. ` +
+  `hbmon-watched builds are NOT covered here; await those with hbmon_wait. ` +
   `cpu-liveness-agent is only a second layer for CPU-bound + --allow-kill. ` +
+  `Builds gone silent without a final (stale heartbeat, default 180s) get ` +
+  `a one-time "[sn] stale:" note instead — a dead monitor is suspected. ` +
   `To disable entirely, set ` +
   `"pluginOptions.opencode-settle-noticer.enabled": false` +
   ` in opencode.jsonc. To bypass per-call, embed "${DEFAULT_SKIP_CONTAINS}" ` +
@@ -166,6 +178,128 @@ export function scanSettled(eventDirs: string[], maxFiles: number = DEFAULT_MAX_
 export function buildNotice(records: SettleRecord[]): string {
   const lines = records.map(
     (r) => `${NOTICE_SENTINEL} ${r.name} ${r.event} (exit=${r.exit}) — ${r.detail} [${r.statusPath}]`,
+  )
+  return "\n\n" + lines.join("\n") + "\n"
+}
+
+/** Finalsız son-olay (bayatlık adayı). `exit` bilerek YOK sayılır. */
+export interface LastEvent {
+  name: string
+  event: string
+  ts: string
+  statusPath: string
+  /** Final mi? Finaller settle yoluna aittir, stale taraması atlar. */
+  hasExit: boolean
+}
+
+/**
+ * Son-olayı parse et (exit şartı YOK — finalsız dosyalar da okunur).
+ * Bozuk/eksik/ts'siz dosyada null (graceful).
+ */
+export function parseLastEvent(path: string): LastEvent | null {
+  let raw: unknown
+  try {
+    if (!existsSync(path)) return null
+    raw = JSON.parse(readFileSync(path, "utf8"))
+  } catch {
+    return null
+  }
+  if (typeof raw !== "object" || raw === null) return null
+  const r = raw as Record<string, unknown>
+  if (typeof r["name"] !== "string" || typeof r["event"] !== "string") return null
+  if (typeof r["ts"] !== "string" || !Number.isFinite(Date.parse(r["ts"] as string))) return null
+  const exit = r["exit"]
+  return {
+    name: r["name"] as string,
+    event: r["event"] as string,
+    ts: r["ts"] as string,
+    statusPath: path,
+    hasExit: exit !== undefined && exit !== null && exit !== "",
+  }
+}
+
+export interface StaleRecord {
+  name: string
+  event: string
+  ts: string
+  ageMs: number
+  statusPath: string
+}
+
+/** Bayatlık işareti: <eventDir>/<name>.stale-notified (içerik: "<ts> <event>"). */
+export function staleNotifiedPath(eventDir: string, name: string): string {
+  return join(eventDir, `${name}.stale-notified`)
+}
+
+export function isStaleNotified(eventDir: string, rec: Pick<StaleRecord, "name" | "ts" | "event">): boolean {
+  try {
+    const marker = readFileSync(staleNotifiedPath(eventDir, rec.name), "utf8").trim()
+    return marker === `${rec.ts} ${rec.event}`
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Yeni olay işareti sıfırlar: marker eski ts/event'i tutar, dosya ilerleyince
+ * eşleşmezlikten bildirim yeniden hak kazanır. Ayrı reset mantığı YOK.
+ */
+export function markStaleNotified(eventDir: string, rec: Pick<StaleRecord, "name" | "ts" | "event">): void {
+  try {
+    writeFileSync(staleNotifiedPath(eventDir, rec.name), `${rec.ts} ${rec.event}\n`, "utf8")
+  } catch {
+    // yut — bir sonraki temasta tekrar bildirilir, kayıp yok
+  }
+}
+
+/**
+ * Finalsız + yaşlı build'leri tara (monitör-ölümü bayatlığı, TASK-131).
+ * Bounded (dizin başına maxFiles), hataya dayanıklı, ts'ye göre sıralı.
+ * `nowMs` enjekte edilebilir (test determinizmi).
+ */
+export function scanStale(
+  eventDirs: string[],
+  staleAfterMs: number = DEFAULT_STALE_AFTER_MS,
+  maxFiles: number = DEFAULT_MAX_FILES,
+  nowMs: number = Date.now(),
+): StaleRecord[] {
+  const found: { rec: StaleRecord; dir: string }[] = []
+  for (const dir of eventDirs) {
+    let entries: string[]
+    try {
+      entries = readdirSync(dir)
+    } catch {
+      continue
+    }
+    const statusFiles = entries
+      .filter((f) => f.endsWith(".status.json"))
+      .sort()
+      .slice(0, Math.max(0, maxFiles))
+    for (const f of statusFiles) {
+      const ev = parseLastEvent(join(dir, f))
+      if (!ev || ev.hasExit) continue
+      const ageMs = nowMs - Date.parse(ev.ts)
+      if (!Number.isFinite(ageMs) || ageMs <= staleAfterMs) continue
+      if (isStaleNotified(dir, ev)) continue
+      found.push({ rec: { name: ev.name, event: ev.event, ts: ev.ts, ageMs, statusPath: ev.statusPath }, dir })
+    }
+  }
+  found.sort((a, b) => (a.rec.ts < b.rec.ts ? -1 : a.rec.ts > b.rec.ts ? 1 : 0))
+  return found.map((x) => x.rec)
+}
+
+function formatStaleAge(ageMs: number): string {
+  const s = Math.floor(ageMs / 1000)
+  if (s < 60) return `${s}sn`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}dk`
+  return `${Math.floor(m / 60)}sa`
+}
+
+/** Bayatlık bildirim metni (çıktı sonuna eklenir). */
+export function buildStaleNotice(records: StaleRecord[]): string {
+  const lines = records.map(
+    (r) => `${STALE_SENTINEL} ${r.name} son olay ${r.event} ${formatStaleAge(r.ageMs)} önce (monitör sessiz — final yok) [${r.statusPath}]`,
   )
   return "\n\n" + lines.join("\n") + "\n"
 }

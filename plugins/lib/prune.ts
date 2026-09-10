@@ -175,6 +175,26 @@ export function matchesRawPatterns(args: unknown, patterns: readonly string[]): 
   })
 }
 
+/**
+ * skipTools eşleşmesi: exact + `_<entry>` suffix.
+ *
+ * Neden suffix? opencode MCP tool adını `<server-key>_<tool>` olarak
+ * expose eder; server key config'te kullanıcı tarafından seçilir ve
+ * rename edilebilir (`opencode-mcp-bash-tools` → `bash`). Düz
+ * `includes` listesi böyle bir rename'de sessizce bozulur (çift-kırpma
+ * geri gelir). Suffix kuralı key'den bağımsızdır: `bash_safe` girdisi
+ * hem `bash_safe` hem `opencode-mcp-bash-tools_bash_safe` hem de
+ * gelecekteki herhangi bir `<key>_bash_safe` adını yakalar.
+ *
+ * Ayraç şartı (`"_" + entry`): `read` girdisinin `bread`/`thread` gibi
+ * tool'ları yanlış yakalamasını önler — eşleşme ya tam ad ya da
+ * alt-çizgi sınırında olur. Case-sensitive (mevcut `skipTools`
+ * sözleşmesi korunur).
+ */
+export function matchesSkipTools(toolName: string, skipTools: readonly string[]): boolean {
+  return skipTools.some((e) => e.length > 0 && (toolName === e || toolName.endsWith("_" + e)))
+}
+
 function collectStrings(value: unknown, depth = 0, seen = new Set<unknown>()): string[] {
   if (typeof value === "string") return [value]
   if (value === null || typeof value !== "object" || depth > 5 || seen.has(value)) return []
@@ -329,11 +349,16 @@ const BUILD_TOKENS = new Set<string>([
   "bun", "make", "cmake", "gradle", "mvn", "go", "tsc",
   "vite", "webpack", "esbuild", "rollup", "tailwind", "maven",
   "docker", "pip", "pip3", "forge", "rgsx", "rain",
+  // Test-runner'lar (TASK-128): session açılmazsa after-hook erken döner ve
+  // hata tespiti hiç çalışmaz. Çıplak `node`/`python` YOK — her script
+  // session açardı (gürültü); `python -m` phrase olarak var.
+  "pytest", "jest", "vitest",
 ])
 const BUILD_PHRASES = new Set<string>([
   "npm run", "bun run", "yarn run", "pnpm run",
   "next build", "docker build",
   "pip install", "pip3 install",
+  "python -m", "npx jest", "npx vitest",
 ])
 
 export function isBuildCommand(command: string): boolean {

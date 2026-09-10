@@ -1,7 +1,7 @@
 ---
 id: TASK-125
 title: "Dış watchdog: monitörün kendisi ölürse 'MONITOR_DEAD' kim diyecek (aday)"
-status: todo
+status: done
 priority: P3
 created: 2026-09-07
 updated: 2026-09-07
@@ -56,3 +56,20 @@ cron mu, opencode-bm tarafı mı?
 - (2026-09-07) Aday olarak açıldı (kullanıcı onayı: "olur task olarak
   aç"). Sıralı iş listesinin 4. maddesi. P3 — Koşum-1'de gerçekleşmedi,
   mekanizma kilitsiz.
+
+## Senaryo kanıtı (2026-09-10, loglar `/tmp/opencode-live-test/task125/events/`)
+
+- Monitör (`node build-mon.mjs --name killtest`, pid 24969) çalıştı: STARTED + 2sn heartbeat'ler.
+- `kill -9 24969` (OOM benzetimi) → monitör öldü, trap çalışmadı.
+- Derleme çocuğu (pid 24976, `sleep 60`) **yetim yaşadı** (S-state, 20sn+), 60sn'de sessizce exit.
+- `events.jsonl` 8×HEARTBEAT'te **dondu, final YOK**; `status.json`'da `exit` alanı YOK
+  → settle-noticer `scanSettled` bulamaz → **bildirim asla ateşlenemez** (doğrulandı).
+- Tasarım girdisi: `status.json`'da monitör pid'i YOK (ts/name/event/detail/log) →
+  pid-liveness kontrolü status dosyasından yapılamaz; yaş-heuristiği gerekir.
+
+## Karar: (a-lite) — dış process YOK, settle-noticer'a bayatlık sezgisi
+
+- Tam dış watchdog (ayrı process/cron): regresyon sonsuzluğu + P3'e ağır → REDDEDİLDİ.
+- Lite: settle-noticer zaten her tool-sonucu event dizinini tarıyor; "son olay
+  final-dışı ve yaşı > N" ise tek satır stale-notice ekler. Yeni process yok,
+  regresyon yok, test edilebilir. Detay + implementasyon → TASK-131.
