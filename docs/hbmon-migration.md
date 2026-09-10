@@ -1,6 +1,6 @@
-# build-mon.sh → hbmon migrasyonu (TASK-004)
+# build-mon.mjs → hbmon migrasyonu (TASK-004, TASK-127 portu)
 
-`scripts/hbmon-build-mon.sh`, `build-mon.sh`'in **sözleşmesini** koruyup
+`scripts/hbmon-build-mon.mjs`, `build-mon.mjs`'in **sözleşmesini** koruyup
 motoru hbmon ile değiştirir. `opencode-settle-noticer` değişmeden çalışır:
 final = `exit` alanlı `<ad>.status.json` kuralı aynıdır.
 
@@ -14,8 +14,8 @@ stall, OOM şüphesi, dep-missing.
 ## Kullanım
 
 ```bash
-# build-mon.sh çağrısındaki komutu aynen taşı:
-scripts/hbmon-build-mon.sh --name j1 --timeout 3600 -- cargo build -j1
+# build-mon.mjs çağrısındaki komutu aynen taşı:
+node scripts/hbmon-build-mon.mjs --name j1 --timeout 3600 -- cargo build -j1
 
 # Gereksinim (bir kez):
 cargo install --git https://github.com/aydemir/hbmon
@@ -24,7 +24,7 @@ cargo install --git https://github.com/aydemir/hbmon
 
 ## Olay haritası
 
-| build-mon.sh | hbmon-build-mon.sh | Kaynak |
+| build-mon.mjs | hbmon-build-mon.mjs | Kaynak |
 |---|---|---|
 | STARTED | STARTED | spawn (uuid) |
 | HEARTBEAT | — (yok; hbmon `metric` JSONL'da) | — |
@@ -40,6 +40,9 @@ cargo install --git https://github.com/aydemir/hbmon
 
 ## Eski yol
 
-`scripts/build-mon.sh` **silinmedi** — LEGACY olarak duruyor, yeni
-kurulumlar `hbmon-build-mon.sh` kullanmalı. Banner/event dosya formatı
-aynı olduğundan geri dönüş tek satır: script adını değiştir.
+`scripts/archive/build-mon.sh` **silinmedi** — LEGACY olarak arşivde duruyor
+(TASK-127: `git mv` ile taşındı, history korunur), yeni kurulumlar
+`hbmon-build-mon.mjs` kullanmalı. Banner/event dosya formatı aynı
+olduğundan geri dönüş tek satır: script adını değiştir. Not: arşivdeki
+`.sh` dosyaları bash/python3 varsayar; `.mjs` portları tek runtime'dır
+(node ≥18).

@@ -22,7 +22,7 @@ export const DEFAULT_MAX_FILES = 20
 
 export const DISCLOSURE_TEXT =
   `[sn-disclosed] Settle Noticer is active. When a build monitored by ` +
-  `scripts/build-mon.sh settles (PASSED/FAILED/ERROR/TIMED_OUT/STALLED-kill/` +
+  `scripts/build-mon.mjs settles (PASSED/FAILED/ERROR/TIMED_OUT/STALLED-kill/` +
   `INTERRUPTED), a one-line note like "[sn] settled: <name> <EVENT> ` +
   `(exit=<code>)" is appended to your next tool result — you do not need ` +
   `to ask or poll events.jsonl. Notices fire once per final (tracked ` +
@@ -30,7 +30,7 @@ export const DISCLOSURE_TEXT =
   `session, it surfaces ` +
   `on next contact. Event dirs come from config eventDirs, else ` +
   `$BUILD_MON_DIR and <cwd>/tmp/build-mon (existing dirs only). ` +
-  `Long builds default: scripts/build-mon.sh --name <id> -- <cmd>; ` +
+  `Long builds default: scripts/build-mon.mjs --name <id> -- <cmd>; ` +
   `result in tmp/build-mon/<id>.status.json via this notice. ` +
   `cpu-liveness-agent is only a second layer for CPU-bound + --allow-kill. ` +
   `To disable entirely, set ` +

@@ -2,7 +2,7 @@
 
 > v0.1.0 — OpenCode için eklenti koleksiyonu
 
-OpenCode için eklenti koleksiyonu. Altı eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları, **`opencode-truncation-noticer`** read-tool kırpma bildirimi, **`opencode-cpu-liveness`** CPU-izleme disclosure'ı, **`opencode-settle-noticer`** biten build'i sorulmadan bildirme ve **`opencode-hbmon`** hbmon custom tool'ları (turn-içi ajan wakeup). Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`) ve script seti **`scripts/build-mon.sh`** (push/event build monitörü) + **`scripts/cpu-liveness-probe/`**.
+OpenCode için eklenti koleksiyonu. Altı eklenti içerir — **`opencode-context-saver` (DHS PTC-mode)** context tasarrufu, **`opencode-build-tracker`** build yaşam döngüsü kancaları, **`opencode-truncation-noticer`** read-tool kırpma bildirimi, **`opencode-cpu-liveness`** CPU-izleme disclosure'ı, **`opencode-settle-noticer`** biten build'i sorulmadan bildirme ve **`opencode-hbmon`** hbmon custom tool'ları (turn-içi ajan wakeup). Artı MCP server **`opencode-mcp-bash-tools`** (`bash_safe`/`bash_raw`) ve script seti **`scripts/build-mon.mjs`** (push/event build monitörü) + **`scripts/cpu-liveness-probe/`**.
 
 > Kaynak: `/root/.config/opencode/plugins/` içindeki canlı kurulumdan kopyalandı. Kod olduğu gibi korunur, ek davranış eklenmez.
 
@@ -20,7 +20,7 @@ OpenCode için eklenti koleksiyonu. Altı eklenti içerir — **`opencode-contex
 
 | Script | Dosya | Amaç |
 |--------|-------|------|
-| **build-mon** | `scripts/build-mon.sh` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır, `events.jsonl` + banner + log rotasyonu) |
+| **build-mon** | `scripts/build-mon.mjs` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır, `events.jsonl` + banner + log rotasyonu) |
 | **cpu-liveness-probe** | `scripts/cpu-liveness-probe/` | Build process CPU izleme (probe + tree-kill + agent) |
 
 Detaylı doküman: `docs/opencode-context-saver.md`, `docs/opencode-build-tracker.md`, `docs/opencode-truncation-noticer.md`, `docs/opencode-cpu-liveness.md`, `docs/opencode-settle-noticer.md`, `docs/opencode-hbmon.md` ve `docs/build-mon.md`
@@ -39,12 +39,12 @@ npm install && npm run build && npm run setup -- --yes
 yerleştirmeyi ortadan kaldırır: `dist/` artifact'lerini doğrular,
 canlı config'e `mcp.opencode-mcp-bash-tools` bloğunu (mutlak
 `server.js` yoluyla, `.bak` yedekli) ve eksikse `plugin`
-girdisini ekler, script setini (`build-mon.sh`,
+girdisini ekler, script setini (`build-mon.mjs`,
 `cpu-liveness-probe/`) kontrol eder. Önce plansız yazmaz:
 `npm run setup -- --dry-run` ile önizle. Yapılandırma:
 `pluginOptions["opencode-plugins"]` (beşine ortak; `enabled:false`
 beşini birden kapatır).
-Uzun derlemeler için `scripts/build-mon.sh` (npm paketine dahildir) +
+Uzun derlemeler için `scripts/build-mon.mjs` (npm paketine dahildir) +
 `opencode-settle-noticer` kombinasyonu kullanılır (detay:
 `docs/build-mon.md`, `docs/opencode-settle-noticer.md`).
 
@@ -118,7 +118,9 @@ opencode-plugins/
 │   ├── lib/                        # paylaşılan: prune, disclosure, raw-refill, truncation-notice, settle-notice, cpu-liveness-disclosure, hbmon-tools
 │   └── mcp-bash-tools/             # MCP server (bash_safe/bash_raw)
 ├── scripts/
-│   ├── build-mon.sh                # push/event build monitörü (TASK-122 rotasyonlu)
+│   ├── build-mon.mjs                # push/event build monitörü (TASK-127 Node portu)
+│   ├── hbmon-build-mon.mjs          # build-mon sözleşmesi, hbmon motoru (TASK-127 Node portu)
+│   ├── archive/                    # legacy .sh portları (git mv, history korunur)
 │   ├── cpu-liveness-probe/         # probe + tree-kill + agent
 │   ├── timeout-kill-probe/         # TASK-115 regresyon bekçisi
 │   └── tui-live/                   # TASK-112 TUI canlı test

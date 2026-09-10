@@ -1,6 +1,6 @@
 # opencode-settle-noticer (`sn`)
 
-`scripts/build-mon.sh` ile izlenen derleme bitince (settle) sonucu
+`scripts/build-mon.mjs` ile izlenen derleme bitince (settle) sonucu
 **sorulmadan** modelin önüne düşürür — next-contact notice (TASK-123).
 
 ## Neden var

@@ -508,7 +508,7 @@
   {
     "id": "TASK-127",
     "title": "build-mon adapter'larının Node portu (bash'tan kurtulma)",
-    "status": "todo",
+    "status": "done",
     "priority": "P2",
     "environment": "both",
     "labels": [
@@ -523,6 +523,6 @@
     ],
     "created": "2026-09-09",
     "updated": "2026-09-09",
-    "file": "tasks/todo/TASK-127-node-port-build-mon.md"
+    "file": "tasks/done/TASK-127-node-port-build-mon.md"
   }
 ]
