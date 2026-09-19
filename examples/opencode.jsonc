@@ -50,7 +50,11 @@
     },
     "opencode-hbmon": {
       "enabled": true,
-      "defaultTimeoutSec": 50
+      "defaultTimeoutSec": 50,
+      "verifyWake": true,
+      "verifyTimeoutSec": 120,
+      "maxInjections": 3,
+      "backoffSec": 15
     }
   },
   "mcp": {

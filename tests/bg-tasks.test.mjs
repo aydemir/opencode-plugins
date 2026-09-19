@@ -292,3 +292,43 @@ test("adapter: marker persistence yok = wake=unknown (exit 1)", async () => {
   assert.equal(verify?.wake, "unknown")
   assert.equal(verify?.persistence, "failed")
 })
+
+// --- stage-6: bg_run → bekçi argv (stub wakeScript, gerçek hbmon watch) ---
+
+async function runBgSpawn(extraConfig, name) {
+  const dir = mkdtempSync(join(tmpdir(), "bgspawn-"))
+  const argvPath = join(dir, "argv.json")
+  const fakeWake = join(dir, "fake-wake.mjs")
+  writeFileSync(
+    fakeWake,
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(argvPath)}, JSON.stringify(process.argv.slice(2)));\n`,
+  )
+  const plugin = await hbmonFactory({}, { wakeScript: fakeWake, ...extraConfig })
+  const out = String(
+    await plugin.tool.bg_run.execute({ name, command: "echo hi-spawn" }, { sessionID: "ses_spawn" }),
+  )
+  if (!/bg_run OK id=([0-9a-f]+)/.test(out)) return { skipped: true }
+  const id = out.match(/id=([0-9a-f]+)/)[1]
+  const deadline = Date.now() + 8000
+  while (!existsSync(argvPath) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  assert.ok(existsSync(argvPath), "stub wakeScript çalışmalı")
+  return { id, argv: JSON.parse(readFileSync(argvPath, "utf8")) }
+}
+
+test("stage-6: bg_run bekçiye --task-id + --attempt-log geçirir", async () => {
+  const r = await runBgSpawn({}, "spawntest")
+  if (r.skipped) return // hbmon yoksa pas geç
+  const ti = r.argv.indexOf("--task-id")
+  assert.ok(ti >= 0 && r.argv[ti + 1] === r.id)
+  const li = r.argv.indexOf("--attempt-log")
+  assert.ok(li >= 0 && r.argv[li + 1].endsWith(`bg-${r.id}.attempts.jsonl`))
+})
+
+test("stage-6: verifyWake:false → legacy bayraksız bekçi", async () => {
+  const r = await runBgSpawn({ verifyWake: false }, "spawnlegacy")
+  if (r.skipped) return // hbmon yoksa pas geç
+  assert.ok(!r.argv.includes("--task-id"))
+  assert.ok(!r.argv.includes("--attempt-log"))
+})

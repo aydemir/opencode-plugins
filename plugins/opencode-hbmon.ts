@@ -8,8 +8,11 @@
  * bg_* (TASK-132): pi/nabız `bg_run` modelinin opencode karşılığı —
  * `bg_run` hemen döner, LLM serbest kalır; iş bitince bekçi script
  * (`scripts/bg-wake.mjs`, detached) `opencode run -s <session>` ile AYNI
- * oturumda yeni turn açar (canlı kanıt: /tmp/opencode-wake-test).
- * Uyandırma başına bir LLM turn'ü maliyeti vardır; `notify:false` kapatır.
+ * oturuma enjeksiyon dener (headless kanıt: /tmp/opencode-wake-test).
+ * `verifyWake` açıkken (default) bekçi busy-safe adapter modunda çalışır
+ * (`--task-id` + export-poll + retry + attempt log); CLI kabulü yeni turn
+ * garantisi vermez. Uyandırma başına bir LLM turn'ü maliyeti vardır;
+ * `notify:false` kapatır.
  *
  * Dürüst sınır: bloklayan çağrı gateway tavanına (~60sn) takılırsa sonuç
  * değil kesinti döner — wait default 50sn, ajan tekrar çağırır.
@@ -51,14 +54,31 @@ interface HbmonPluginConfig {
   defaultTimeoutSec?: number
   /** bg wake bekçi scripti (boşsa repo scripts/bg-wake.mjs). */
   wakeScript?: string
+  /** busy-safe adapter açık mı (default true; false = legacy tek-enjeksiyon). */
+  verifyWake?: boolean
+  /** adapter verify döngüsü toplam bütçesi, sn (default 120). */
+  verifyTimeoutSec?: number
+  /** adapter en fazla enjeksiyon denemesi (default 3). */
+  maxInjections?: number
+  /** adapter tekrar enjeksiyon öncesi min bekleme, sn (default 15). */
+  backoffSec?: number
 }
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/
+
+const numOr = (v: unknown, d: number): number => {
+  const n = typeof v === "number" ? v : Number(v)
+  return Number.isFinite(n) && (n as number) >= 0 ? (n as number) : d
+}
 
 const DEFAULT_CONFIG: HbmonPluginConfig = {
   enabled: true,
   bin: undefined,
   defaultTimeoutSec: 50,
+  verifyWake: true,
+  verifyTimeoutSec: 120,
+  maxInjections: 3,
+  backoffSec: 15,
 }
 
 const HbmonPlugin: Plugin = async (_input, _options) => {
@@ -142,7 +162,7 @@ const HbmonPlugin: Plugin = async (_input, _options) => {
 
       bg_run: tool({
         description:
-          "Uzun işi arka plana at, HEMEN dön (bloklama yok). LLM serbest kalır: başka iş yap veya turn'ü bitir; iş bitince bekçi aynı oturumda yeni turn açar (`opencode run -s`, uyandırma başına bir LLM turn'ü maliyeti). Kapatmak için notify:false (o zaman bg_status ile yokla). Komut bash -c ile koşar.",
+          "Uzun işi arka plana at, HEMEN dön (bloklama yok). LLM serbest kalır: başka iş yap veya turn'ü bitir; iş bitince bekçi aynı oturuma enjeksiyon dener (busy-safe adapter: marker + export-poll + retry, doğrulama attempt log'da). Kapatmak için notify:false (o zaman bg_status ile yokla). Komut bash -c ile koşar.",
         args: {
           name: tool.schema.string().describe("Görev adı (harf/rakam/_.-, max 64)"),
           command: tool.schema.string().describe("Arka planda koşacak bash komutu"),
@@ -188,14 +208,28 @@ const HbmonPlugin: Plugin = async (_input, _options) => {
               // Bekçi çıktısı dosyaya (kör nokta yok); process detached+unref.
               const wakeLog = path.join(dir, `bg-${h.uuid}.wake.log`)
               const outFd = fs.openSync(wakeLog, "a")
-              const child = spawn(
-                process.execPath,
-                [wake, "--session", sessionID, "--sock", h.sock, "--log", h.log, "--name", args.name],
-                { detached: true, stdio: ["ignore", outFd, outFd] },
-              )
+              // Stage-6: adapter bayrakları (verifyWake:false = legacy).
+              const wakeArgs = ["--session", sessionID, "--sock", h.sock, "--log", h.log, "--name", args.name]
+              if (config.verifyWake !== false) {
+                wakeArgs.push(
+                  "--task-id", h.uuid,
+                  "--attempt-log", path.join(dir, `bg-${h.uuid}.attempts.jsonl`),
+                  "--verify-timeout-sec", String(numOr(config.verifyTimeoutSec, 120)),
+                  "--max-injections", String(Math.max(1, Math.floor(numOr(config.maxInjections, 3)))),
+                  "--backoff-sec", String(numOr(config.backoffSec, 15)),
+                )
+              }
+              const child = spawn(process.execPath, [wake, ...wakeArgs], {
+                detached: true,
+                stdio: ["ignore", outFd, outFd],
+              })
               child.unref()
               fs.closeSync(outFd)
-              lines.push(`Uyandırma kuruldu: bitince bu oturumda yeni turn açılır.`)
+              lines.push(
+                config.verifyWake !== false
+                  ? `Enjeksiyon denemesi kuruldu: bekçi marker+export-poll ile doğrulayacak (attempt log: ${path.join(dir, `bg-${h.uuid}.attempts.jsonl`)}). CLI kabulü yeni turn garantisi vermez.`
+                  : `Uyandırma kuruldu (legacy tek-enjeksiyon): bitince enjeksiyon denenir, doğrulama yok.`,
+              )
               lines.push(`Bekçi logu: ${wakeLog}`)
             } catch {
               lines.push(`Bekçi kurulamadı (wake atlandı); bg_status ile yokla.`)

@@ -57,6 +57,10 @@ bg_kill {id: "derle"} → process group TERM
 | `bin` | yok | HBMON_BIN yerine geçecek ikilik yolu |
 | `defaultTimeoutSec` | `50` | wait daemon tavanı (gateway altı tut) |
 | `wakeScript` | `scripts/bg-wake.mjs` | Uyandırma bekçisi (boş bırakılamaz değil, override edilir) |
+| `verifyWake` | `true` | `false` = legacy tek-enjeksiyon (doğrulamasız bekçi) |
+| `verifyTimeoutSec` | `120` | Adapter verify döngüsü toplam bütçesi (sn) |
+| `maxInjections` | `3` | Adapter en fazla enjeksiyon denemesi |
+| `backoffSec` | `15` | Adapter tekrar enjeksiyon öncesi min bekleme (sn) |
 
 - Uyandırma başına bir LLM turn'ü maliyeti (~12K input token) — kapatmak
   için çağrıda `notify:false` (o zaman `bg_status` ile yokla).
@@ -101,10 +105,11 @@ gözlemle raporlanır (CLI kabul ≠ wake).
 | aynı taskId tekrar | yeni injection yok (`already-confirmed`) |
 | marker yok | `wake=unknown` |
 
-Not: `bg_run` plugin'i şu an bekçiyi bayraksız çağırır (legacy);
-`--task-id` entegrasyonu ayrı aşamadır (stage-6). Scheduler
-değişikliği ertelendi — adapter önce `persistence ✓ / turn ✗`
-verisini gerçek testte üretmeli.
+Not: `bg_run` bekçiyi `verifyWake` açıkken (default) adapter modunda
+çağırır (`--task-id <uuid>` + `--attempt-log` + verify bütçeleri);
+`verifyWake:false` legacy tek-enjeksiyondur. Scheduler değişikliği
+ertelendi — adapter önce `persistence ✓ / turn ✗` verisini gerçek
+testte üretmeli.
 
 ## Dürüst sınırlar
 
