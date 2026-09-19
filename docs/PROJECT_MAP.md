@@ -192,7 +192,7 @@ burada. **Public API (export edilenler):**
 | `resolvePruneBudget` | `(options) => void` | Bütçe invariant kontrolü |
 | `isBuildCommand` | `(command: string) => boolean` | Shell komut heuristic |
 | `extractErrors` | `(text, opts?) => string` | Hata satırı önceliklendirme |
-| `formatPruneMarker` | `(stats: PruneMarkerStats) => string` | Bilgilendirici marker üretir (TASK-101) |
+| `formatPruneMarker` | `(stats: PruneMarkerStats, opts?: { colorMarkers?: boolean }) => string` | Bilgilendirici marker üretir (TASK-101); `colorMarkers:true` sentinel prefix'i sarı ANSI ile sarar (default `false` = temiz) |
 | `shouldSkipForArgs` | `(args: unknown, skipWhenContains?: string) => boolean` | Per-call bypass kontrolü (TASK-104) |
 | `PruneMarkerStats` | interface | Marker stats tipi |
 | `PruneMiddleOptions` | interface | `enabled`, `skipWhenContains`, `markerBuilder`… |
@@ -213,7 +213,7 @@ yardımcılar burada toplanır.
 | `DEFAULT_SKIP_CONTAINS` | `string` (sabit) | `"#no-trunc-notice"` — per-call bypass substring |
 | `countLines` | `(text: string) => number` | wc -l semantiği (trailing newline sayılmaz) |
 | `parseLastLineNo` | `(output: string, sep?: string) => number` | `<n>\t<line>` formatından son satır no |
-| `buildMarker` | `(last, total, path, nextOffset) => string` | Marker üretir (offset/sed hint dahil) |
+| `buildMarker` | `(last, total, path, nextOffset, opts?: { colorMarkers?: boolean }) => string` | Marker üretir (offset/sed hint dahil) |
 | `resolveFilePath` | `(raw: unknown) => string \| null` | cwd-relative path resolution |
 
 **Neden lib'de?** opencode 1.18.29 `getLegacyPlugins`
@@ -224,6 +224,17 @@ hatası veriyor. Sabitleri lib'e taşıyarak plugin dosyasını yalnızca
 `default` export ile sınırlı tutuyoruz. Bu pattern opencode'daki
 diğer plugin'ler için de gerekli (context-saver, build-tracker aynı
 regression'a sahip — ayrı takip görevi).
+
+### `plugins/lib/color-markers.ts` (colorMarkers flag)
+
+Opsiyonel TUI renk helper'ı (`colorMarkers` config flag'i, default
+`false`). `colorizePrefix(prefix, enabled?)` sentinel prefix'ini
+`true` ise sarı ANSI (`\x1b[33m…\x1b[0m`) ile sarar, `false`/yoksa
+girdiyi aynen döner. ANSI sentinel'in etrafında (içinde değil) →
+`includes("[cs] pruned:")` invariant'ları korunur. Kapsam: sadece
+marker/notice prefix'leri (cs/tn/sn); `buildMarker`, `buildNotice`,
+`buildStaleNotice`, `formatPruneMarker`, `formatShortPruneMarker`
+hepsi `opts.colorMarkers` alır.
 
 ## MCP Servers — `plugins/mcp-bash-tools/`
 
@@ -283,6 +294,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 | Dosya | Amaç |
 |-------|------|
 | `opencode-context-saver.md` | Plugin detayları, marker formatı, escape mekanizması, benchmark tablosu (97.5%) |
+| `bg-wake-bulgular-cozumler.md` | bg-wake bulgular + busy-safe adapter + OpenCode core müdahale noktaları (M1–M4, eşikli) + TUI ölçüm protokolü |
 | `opencode-build-tracker.md` | Build plugin dokümantasyonu |
 | `opencode-cpu-liveness.md` | CPU liveness disclosure plugin + script paketi kullanım özeti |
 | `plugin-test.md` | Manuel test rehberi |
@@ -327,7 +339,7 @@ LLM'e schema-kontrollü bypass yolu sunar. İki katman bağımsız
 
 | Dosya | Amaç |
 |-------|------|
-| `scripts/tui-live/cs-marker.sh` | TASK-112 Asama 1: cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Kosum 4 PASS) |
+| `scripts/archive/cs-marker.sh` | TASK-112 Aşama 1 (arşiv): cs-marker prune marker TUI render testi (tmux + capture-pane, exit 0/1/2/3; Koşum 4 PASS). TASK done → arşivde; yeni bash betiği yok (Node politikası) |
 | `scripts/cpu-liveness-probe/` (`@opencode-plugins/cpu-liveness-probe` workspace paketi, TASK-116/117) | Build process CPU izleme: `cpu-liveness-probe.js` (probe) + `tree-kill.js` + `cpu-liveness-agent.js` (bin: `cpu-liveness-agent`) + `io-wait.js` (I/O grace sınıflandırıcı). Agent: stall→uyarı/kill, `--maxBudgetMs` (exit 4), SIGTERM grup-temizlik, `[final-json]`. Testler: `tests/cpu-liveness-{probe,disclosure,agent-signal,agent-budget,iowait,final}.test.mjs`. Linux `/proc` canlı-testli; macOS/Windows okuyucuları TEST EDİLMEDİ |
 | `scripts/timeout-kill-probe/` (TASK-115) | exec timeout orphan regresyon bekçisi (A guard/B diferansiyel/C daemonize); `/bin/bash` şartı |
 | `scripts/build-mon.mjs` | Push/event build monitörü (opencode-bm poll-only boşluğunu kapatır; `bm_start` ile sarmalanır). Olaylar: STARTED/HEARTBEAT/STALLED/TIMED_OUT/PASSED/FAILED/ERROR/INTERRUPTED → `events.jsonl` + `<ad>.status.json` + stdout banner + bell + notify-send. Stall = çıktı+CPU sessizliği (`readTreeCpuTime`: pid + canlı torunlar); `--kill-on-stall`, `--timeout` (exit 124), stall-kill (exit 111). Olay dizini: `--event-dir` / `$BUILD_MON_DIR` / `./tmp/build-mon`. Rotasyon (TASK-122): `<ad>.log` PASSED→sil, fail→`<ad>.log.<olay>-<ts>` arşiv; `events.jsonl` audit-trail, boyut/yaş rotasyonu (`--rotate-size/days/keep`). Node portu (TASK-127, bash/python3 yok); legacy `.sh` `scripts/archive/`'de. Doc: `docs/build-mon.md` |
