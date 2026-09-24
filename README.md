@@ -1,5 +1,10 @@
 # opencode-plugins
 
+> **MOVED → [`aydemir/nabiz`](https://github.com/aydemir/nabiz/tree/master/packages/harness-opencode).**
+> This repo is superseded by the nabiz monorepo (`packages/harness-opencode`
+> + shared `packages/core`); `index.json`/`tasks/` stay read-only for history.
+> New work happens in nabiz — no new development here.
+
 **English** | [Türkçe](README.tr.md)
 
 > v0.1.0 — Plugin collection for OpenCode
@@ -106,10 +111,9 @@ opencode-plugins/
 ├── scripts/
 │   ├── build-mon.mjs                # push/event build monitor (TASK-127 Node port)
 │   ├── hbmon-build-mon.mjs          # build-mon contract, hbmon engine (TASK-127 Node port)
-│   ├── archive/                    # legacy .sh ports (git mv, history preserved)
+│   ├── archive/                    # legacy .sh (build-mon, hbmon-build-mon, cs-marker; git mv, history preserved)
 │   ├── cpu-liveness-probe/         # probe + tree-kill + agent
-│   ├── timeout-kill-probe/         # TASK-115 regression guard
-│   └── tui-live/                   # TASK-112 TUI live test
+│   └── timeout-kill-probe/         # TASK-115 regression guard
 ├── docs/                           # plugin + build-mon + case writings (in Turkish)
 ├── examples/
 │   └── opencode.jsonc
