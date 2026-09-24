@@ -118,10 +118,11 @@ export interface WatchHandshake {
 export async function watchBuild(
   bin: string,
   command: string[],
-  opts: { uuid?: string; timeoutSec?: number; env?: NodeJS.ProcessEnv } = {},
+  opts: { uuid?: string; timeoutSec?: number; label?: string; env?: NodeJS.ProcessEnv } = {},
 ): Promise<{ handshake?: WatchHandshake; raw: HbmonRun; error?: string }> {
   const args = ["watch", "--detach"]
   if (opts.uuid) args.push("--uuid", opts.uuid)
+  if (opts.label) args.push("--label", opts.label)
   if (opts.timeoutSec !== undefined) args.push("--timeout-sec", String(opts.timeoutSec))
   args.push("--", ...command)
   const raw = await runHbmon(bin, args, 30000, opts.env)
@@ -215,12 +216,15 @@ export async function statusBuild(
   sock: string,
   env: NodeJS.ProcessEnv = process.env,
   startupGraceMs = 10000,
+  compact = false,
 ): Promise<{ response?: unknown; error?: string }> {
-  let raw = await runHbmon(bin, ["status", "--sock", sock], 30000, env)
+  const statusArgs = ["status", "--sock", sock]
+  if (compact) statusArgs.push("--compact")
+  let raw = await runHbmon(bin, statusArgs, 30000, env)
   const deadline = Date.now() + startupGraceMs
   while (!raw.json && isConnectionError(raw) && Date.now() < deadline) {
     await sleep(250)
-    raw = await runHbmon(bin, ["status", "--sock", sock], 30000, env)
+    raw = await runHbmon(bin, statusArgs, 30000, env)
   }
   if (raw.error) return { error: raw.error }
   if (!raw.json || typeof raw.json !== "object") {

@@ -78,3 +78,11 @@ output (schema-controlled, actually works).
 suffix rule (`bash_safe`, `bash_raw` match any `<key>_bash_safe` /
 `<key>_bash_raw`) so the two layers don't double-prune — server key
 renames can't silently break the skip.
+
+## Platform
+
+- POSIX: shell `/bin/bash` (TASK-115: dash orphan bırakır, bash şart).
+- Windows (2026-09-08, ilk win32 canlı testi): `/bin/bash` ENOENT
+  veriyordu, tüm komutlar `[exit 1]` dönüyordu. win32'de `ComSpec`
+  (cmd) kullanılır — POSIX deyimleri çalışmaz (bilinçli sınır),
+  orphan-garantisi TEST EDİLMEDİ.

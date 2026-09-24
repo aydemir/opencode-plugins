@@ -10,6 +10,24 @@ import { promisify } from "node:util"
 
 const execAsync = promisify(exec)
 
+/**
+ * Platform-duyarlı shell seçimi.
+ *
+ * POSIX: `/bin/bash` şart — /bin/sh (dash) timeout'ta torun process'i
+ * orphan bırakıyor (canlı kanıt 2026-09-06: scripts/timeout-kill-probe,
+ * sh→ORPHAN 2/2 vs bash→TEMİZ 2/2).
+ *
+ * Windows (2026-09-08 kararı, ilk win32 canlı testi): `/bin/bash` ENOENT
+ * veriyor, TÜM komutlar `[exit 1]` dönüyordu. win32'de ComSpec (cmd)
+ * kullanılır — bash deyimleri (`seq`, `&&` zincirleri hariç POSIX
+ * sözdizimi) çalışmaz, bu bilinçli sınır. Orphan-garantisi win32'de
+ * TEST EDİLMEDİ (TASK-115 sadece Linux).
+ */
+function resolveShell(): string {
+  if (process.platform === "win32") return process.env.ComSpec || "cmd.exe"
+  return "/bin/bash"
+}
+
 const ERROR_LINE_REGEX =
   /\berror\b|\bfailed\b|^\s*→|^\s*error\[|TypeError|ReferenceError|SyntaxError|^Cannot find|^Unable to|^Unresolved|^npm ERR!|^fatal|^panic/i
 
@@ -36,12 +54,7 @@ export async function runBash(
     const { stdout, stderr } = await execAsync(command, {
       timeout: timeoutMs,
       maxBuffer: 50 * 1024 * 1024, // 50 MB — sonra prune/limit uygular
-      // shell KRİTİK: /bin/bash şart, /bin/sh (dash) ile değiştirme.
-      // Timeout'ta dash sadece shell'i öldürüp torun process'i orphan
-      // bırakıyor (PPID 1, CPU'da yaşar); bash torunu da temizliyor.
-      // Canlı kanıt (2026-09-06): scripts/timeout-kill-probe — aynı komutta
-      // sh→ORPHAN 2/2, bash→TEMİZ 2/2.
-      shell: "/bin/bash",
+      shell: resolveShell(),
       windowsHide: true,
     })
     return {

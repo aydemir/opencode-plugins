@@ -15,7 +15,8 @@ export const bashRawSchema = {
   properties: {
     command: {
       type: "string",
-      description: "Bash command to execute (passed to bash -c).",
+      description:
+        "Bash command to execute (passed to bash -c; on Windows: ComSpec/cmd semantics).",
     },
     description: {
       type: "string",

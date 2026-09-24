@@ -79,6 +79,13 @@ yol yazma kafa karışıklığını ortadan kaldırır.
 
 ## Notlar / Kararlar
 
+- [2026-09-08] DECISION: "MCP bu akışa dahil değil (manuel mcp bloğu)"
+  non-goal SUPERSEDED → `scripts/setup.mjs` (`npm run setup`, 8 test:
+  `tests/setup.test.mjs`) tamset kurar: artifact doğrulama + canlı
+  config'e plugin girdisi ve `mcp.opencode-mcp-bash-tools` merge'i
+  (.bak yedekli, bayraksız yazmaz) + script kontrolü | REASON: manuel
+  yerleştirme kayboluyordu, kullanıcı onayı alındı (otomatik yaz OK).
+
 - Sözleşme: `exports["./server"] | exports["./tui"] | main | oc-themes`.
   Boot `Zy()`: Object.values iterate, aynı değer dedupe, non-function
   → tüm modül düşer. Altı factory AYNI spec options objesini alır
